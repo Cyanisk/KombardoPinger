@@ -1,3 +1,44 @@
+import sys
+import os
+import random
+from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, QWidget
+from PyQt5.QtCore import Qt, QEvent, QObject, pyqtSignal, QMetaObject, pyqtSlot, QCoreApplication, QTimer
+from MainWindow import Ui_MainWindow
+
+
+class KombardoPinger(QMainWindow):
+    
+    def __init__(self):
+        super().__init__()
+        
+        # Set up main window
+        self.ui = Ui_MainWindow()
+        self.ui.setupUi(self)
+        self.setWindowTitle("Kombardo Pinger")
+        
+        self.var = {}
+        with open('variables.txt') as v:
+            for line in v:
+                (key, val) = line.split()
+                self.var[key] = val
+    
+        # Events
+        self.ui.pushButton_datenext.clicked.connect(self.datenext)
+        self.ui.pushButton_timeprev.clicked.connect(self.timeprev)
+    
+    def datenext(self):
+        self.ui.stackedWidget.setCurrentIndex(1)
+    
+    def timeprev(self):
+        self.ui.stackedWidget.setCurrentIndex(0)
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+    widget = KombardoPinger()
+    widget.show()
+    app.exec_()
+
+#%%
 import smtplib
 import ssl
 import time
@@ -15,7 +56,7 @@ receiver = 'mads2112@live.dk'
 timeout = 20
 wait = 1
 auto_input = True
-input_list = ['Ystad-Rønne', 'Alm', '2', '3', '08:30', '18:30']
+input_list = ['Ystad-Rønne', 'Alm', '2', '13', '08:30', '18:30']
 
 def init_email(receiver):
     mail_dict = {}
