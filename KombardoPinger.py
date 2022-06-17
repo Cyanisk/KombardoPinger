@@ -1,9 +1,12 @@
 import sys
 import os
 import random
+import datetime
+from datetime import date
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, QWidget
 from PyQt5.QtCore import Qt, QEvent, QObject, pyqtSignal, QMetaObject, pyqtSlot, QCoreApplication, QTimer
 from MainWindow import Ui_MainWindow
+from TimeWidget import TimeWidget
 
 
 class KombardoPinger(QMainWindow):
@@ -16,21 +19,57 @@ class KombardoPinger(QMainWindow):
         self.ui.setupUi(self)
         self.setWindowTitle("Kombardo Pinger")
         
+        # Read variables
         self.var = {}
         with open('variables.txt') as v:
             for line in v:
                 (key, val) = line.split()
                 self.var[key] = val
+        
+        # Set up date screen
+        self.loadPageDate()
     
         # Events
-        self.ui.pushButton_datenext.clicked.connect(self.datenext)
-        self.ui.pushButton_timeprev.clicked.connect(self.timeprev)
+        self.ui.pushButton_datenext.clicked.connect(self.dateNext)
+        self.ui.pushButton_timeprev.clicked.connect(self.timePrev)
+        self.ui.dateEdit_first.dateChanged.connect(self.fixLastDate)
+        self.ui.dateEdit_last.dateChanged.connect(self.fixFirstDate)
     
-    def datenext(self):
+    def loadPageDate(self):
+        self.ui.dateEdit_first.setDate(date.today())
+        self.ui.dateEdit_first.setMinimumDate(date.today())
+        self.ui.dateEdit_last.setDate(date.today())
+        self.ui.dateEdit_last.setMinimumDate(date.today())
+    
+    def dateNext(self):
+        delta = self.ui.dateEdit_first.date().daysTo(self.ui.dateEdit_last.date())
+        self.n_dates = delta + 1
+        self.time_widgets = [TimeWidget(self.ui.page_time) for i in range(self.n_dates)]
+        self.loadPageTime(0)
         self.ui.stackedWidget.setCurrentIndex(1)
     
-    def timeprev(self):
+    def loadPageTime(self, date_idx):
+        text = self.time_widgets[date_idx].label_time.text()
+        text = text.replace('$afgangnr', str(date_idx+1))
+        text = text.replace('$afgangeialt', str(self.n_dates))
+        print(self.time_widgets[date_idx].label_time.text())
+        self.time_widgets[date_idx].label_time.setText(text)
+        print(self.time_widgets[date_idx].label_time.text())
+        #self.ui.page_time.layout().removeWidget(self.ui.widget_time)
+        self.ui.page_time.layout().insertWidget(1, self.time_widgets[date_idx], 1)
+        #print(dir(self.ui.frame_time))#.addWidget(Ui_Form())
+        #self.ui.timeWidget.setupUi(self.ui.timeWidget)
+    
+    def timePrev(self):
         self.ui.stackedWidget.setCurrentIndex(0)
+    
+    def fixLastDate(self):
+        if self.ui.dateEdit_first.date() > self.ui.dateEdit_last.date():
+            self.ui.dateEdit_last.setDate(self.ui.dateEdit_first.date())
+    
+    def fixFirstDate(self):
+        if self.ui.dateEdit_first.date() > self.ui.dateEdit_last.date():
+            self.ui.dateEdit_first.setDate(self.ui.dateEdit_last.date())
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

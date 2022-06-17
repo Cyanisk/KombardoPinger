@@ -248,7 +248,14 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboBox_datefirst"/>
+               <widget class="QDateEdit" name="dateEdit_first">
+                <property name="displayFormat">
+                 <string>d/M</string>
+                </property>
+                <property name="calendarPopup">
+                 <bool>true</bool>
+                </property>
+               </widget>
               </item>
               <item>
                <widget class="QLabel" name="label_7">
@@ -258,9 +265,12 @@
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboBox_datelast">
-                <property name="enabled">
-                 <bool>false</bool>
+               <widget class="QDateEdit" name="dateEdit_last">
+                <property name="displayFormat">
+                 <string>d/M</string>
+                </property>
+                <property name="calendarPopup">
+                 <bool>true</bool>
                 </property>
                </widget>
               </item>
@@ -303,7 +313,7 @@
        </layout>
       </widget>
       <widget class="QWidget" name="page_time">
-       <layout class="QVBoxLayout" name="verticalLayout_6" stretch="0,1,0">
+       <layout class="QVBoxLayout" name="verticalLayout_6">
         <property name="leftMargin">
          <number>10</number>
         </property>
@@ -338,99 +348,6 @@
            <set>Qt::AlignCenter</set>
           </property>
          </widget>
-        </item>
-        <item>
-         <layout class="QVBoxLayout" name="verticalLayout_5">
-          <item>
-           <spacer name="verticalSpacer_8">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
-           <widget class="QLabel" name="label_time">
-            <property name="text">
-             <string>Afgang d. $dato
-($afgangnr/$afgangeialt)</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <spacer name="verticalSpacer_7">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_7">
-            <item>
-             <widget class="QLabel" name="label_17">
-              <property name="text">
-               <string>Afgangstidspunkt:</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_21">
-              <item>
-               <widget class="QLabel" name="label_16">
-                <property name="text">
-                 <string>Mellem</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QComboBox" name="comboBox_timefirst"/>
-              </item>
-              <item>
-               <widget class="QLabel" name="label_25">
-                <property name="text">
-                 <string>og</string>
-                </property>
-               </widget>
-              </item>
-              <item>
-               <widget class="QComboBox" name="comboBox_timelast">
-                <property name="enabled">
-                 <bool>false</bool>
-                </property>
-               </widget>
-              </item>
-             </layout>
-            </item>
-           </layout>
-          </item>
-          <item>
-           <spacer name="verticalSpacer_6">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-         </layout>
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_13">
