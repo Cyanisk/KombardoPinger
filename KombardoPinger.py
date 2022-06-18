@@ -3,7 +3,17 @@ import os
 import random
 import datetime
 from datetime import date
-from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, QWidget
+import time
+
+import smtplib
+import ssl
+
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+
+from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, QWidget, QStackedWidget
 from PyQt5.QtCore import Qt, QEvent, QObject, pyqtSignal, QMetaObject, pyqtSlot, QCoreApplication, QTimer
 from MainWindow import Ui_MainWindow
 from TimeWidget import TimeWidget
@@ -35,37 +45,65 @@ class KombardoPinger(QMainWindow):
         self.ui.dateEdit_first.dateChanged.connect(self.fixLastDate)
         self.ui.dateEdit_last.dateChanged.connect(self.fixFirstDate)
     
+    
+    def rand_sleep(self, sec, u=0.2):
+        sec = int(sec)
+        noise = random.random()*2 - 1
+        time.sleep(sec + sec*u*noise)
+        
+        
+    def wait_for_elem(self, by, addr, timeout, wait):
+        WebDriverWait(self.driver, timeout).until(EC.element_to_be_clickable((by, addr)))
+        self.rand_sleep(wait)
+        
+        
     def loadPageDate(self):
         self.ui.dateEdit_first.setDate(date.today())
         self.ui.dateEdit_first.setMinimumDate(date.today())
         self.ui.dateEdit_last.setDate(date.today())
         self.ui.dateEdit_last.setMinimumDate(date.today())
+        
+        # Open website
+        self.driver = webdriver.Firefox()
+        self.driver.get('https://www.bornholmslinjen.dk/booking')
+        
+        # Decline unnecessary cookies
+        button = 'declineButton'
+        self.wait_for_elem(By.ID, button, self.var['timeout'], self.var['wait'])
+        self.driver.find_element(By.XPATH, '//*[@id="declineButton"]').click()
+    
     
     def dateNext(self):
+        # Make a departure-time widget for each date
         delta = self.ui.dateEdit_first.date().daysTo(self.ui.dateEdit_last.date())
         self.n_dates = delta + 1
-        self.time_widgets = [TimeWidget(self.ui.page_time) for i in range(self.n_dates)]
+        self.time_widgets = [TimeWidget() for i in range(self.n_dates)]
+        
         self.loadPageTime(0)
         self.ui.stackedWidget.setCurrentIndex(1)
     
+    
     def loadPageTime(self, date_idx):
-        text = self.time_widgets[date_idx].label_time.text()
-        text = text.replace('$afgangnr', str(date_idx+1))
-        text = text.replace('$afgangeialt', str(self.n_dates))
-        print(self.time_widgets[date_idx].label_time.text())
-        self.time_widgets[date_idx].label_time.setText(text)
-        print(self.time_widgets[date_idx].label_time.text())
-        #self.ui.page_time.layout().removeWidget(self.ui.widget_time)
-        self.ui.page_time.layout().insertWidget(1, self.time_widgets[date_idx], 1)
-        #print(dir(self.ui.frame_time))#.addWidget(Ui_Form())
-        #self.ui.timeWidget.setupUi(self.ui.timeWidget)
+        self.ui.dateEdit_time.setDate(self.ui.dateEdit_first.date())
+        self.ui.dateEdit_time.setMinimumDate(self.ui.dateEdit_first.date())
+        self.ui.dateEdit_time.setMaximumDate(self.ui.dateEdit_last.date())
+        # Create a stackedwidget page for each date (after removing the existing stackedwidget)
+        self.ui.page_time.layout().removeWidget(self.ui.page_time.layout().itemAt(3).widget())
+        
+        self.stackedWidget_time = QStackedWidget()
+        self.ui.page_time.layout().insertWidget(3, self.stackedWidget_time, stretch=1)
+        for i in range(self.n_dates):
+            self.stackedWidget_time.addWidget(TimeWidget())
+    
     
     def timePrev(self):
         self.ui.stackedWidget.setCurrentIndex(0)
     
+    
     def fixLastDate(self):
         if self.ui.dateEdit_first.date() > self.ui.dateEdit_last.date():
             self.ui.dateEdit_last.setDate(self.ui.dateEdit_first.date())
+    
     
     def fixFirstDate(self):
         if self.ui.dateEdit_first.date() > self.ui.dateEdit_last.date():
