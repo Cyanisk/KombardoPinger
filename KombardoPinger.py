@@ -79,8 +79,44 @@ class KombardoPinger(QMainWindow):
         self.n_dates = delta + 1
         self.time_widgets = [TimeWidget() for i in range(self.n_dates)]
         
+        # Load time page
         self.loadPageTime(0)
         self.ui.stackedWidget.setCurrentIndex(1)
+        
+        # Fill in website form
+        
+        # Origin
+        parent_id = 'booking'
+        xpath = 'div/form/div/div[3]/div[1]/button'
+        button = self.driver.find_element(By.XPATH, '//*[@id="' + parent_id +'"]/' + xpath)
+        self.wait_for_elem(By.ID, parent_id, self.var['timeout'], self.var['wait'])
+        button.click()
+        
+        self.rand_sleep(1)
+        xpath = 'div/form/div/div[3]/div[1]/div/div/div/div/div/button'
+        buttons = self.driver.find_elements(By.XPATH, '//*[@id="' + parent_id +'"]/' + xpath)
+        enum = enumerate(buttons)
+        orig_dict = dict((button.text, idx) for idx, button in enum)
+        
+        orig_str = self.ui.comboBox_route.currentText().split('-')[0]
+        buttons[orig_dict[orig_str]].click()
+        
+        # Destination
+        xpath = 'div/form/div/div[3]/div[2]/button'
+        button = self.driver.find_element(By.XPATH, '//*[@id="' + parent_id +'"]/' + xpath)
+        self.wait_for_elem(By.ID, parent_id, self.var['timeout'], self.var['wait'])
+        button.click()
+        
+        self.rand_sleep(1)
+        xpath = 'div/form/div/div[3]/div[2]/div/div/div/div/div/button'
+        buttons = self.driver.find_elements(By.XPATH, '//*[@id="' + parent_id +'"]/' + xpath)
+        enum = enumerate(buttons)
+        orig_dict = dict((button.text, idx) for idx, button in enum)
+        
+        orig_str = self.ui.comboBox_route.currentText().split('-')[1]
+        buttons[orig_dict[orig_str]].click()
+        
+        #/html/body/div[2]/div/div/section/div/
     
     
     def loadPageTime(self, date_idx):
