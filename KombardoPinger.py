@@ -10,6 +10,7 @@ import ssl
 
 from selenium import webdriver
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -47,14 +48,30 @@ class KombardoPinger(QMainWindow):
     
     
     def rand_sleep(self, sec, u=0.2):
-        sec = int(sec)
         noise = random.random()*2 - 1
         time.sleep(sec + sec*u*noise)
         
         
-    def wait_for_elem(self, by, addr, timeout, wait):
+    def wait_for_elem(self, by, addr, timeout=10, wait=0):
         WebDriverWait(self.driver, timeout).until(EC.element_to_be_clickable((by, addr)))
         self.rand_sleep(wait)
+    
+    
+    def getElement(self, parent_id, xpath, timeout=10):
+        button = WebDriverWait(self.driver, timeout).until(
+            EC.presence_of_element_located(
+                (By.XPATH, '//*[@id="' + parent_id +'"]/' + xpath)))
+        return button
+    
+    
+    def getElements(self, parent_id, xpath):
+        return self.driver.find_elements(By.XPATH, '//*[@id="' + parent_id +'"]/' + xpath)
+    
+    
+    def clickButton(self, button, timeout=10, wait=0):
+        WebDriverWait(self.driver, timeout).until(EC.element_to_be_clickable(button))
+        self.rand_sleep(wait)
+        button.click()
         
         
     def loadPageDate(self):
@@ -69,11 +86,20 @@ class KombardoPinger(QMainWindow):
         
         # Decline unnecessary cookies
         button = 'declineButton'
-        self.wait_for_elem(By.ID, button, self.var['timeout'], self.var['wait'])
+        self.wait_for_elem(By.ID, button)
         self.driver.find_element(By.XPATH, '//*[@id="declineButton"]').click()
     
     
     def dateNext(self):
+        # Save info
+        route = self.ui.comboBox_route.currentText().split('-')
+        self.orig = route[0]
+        self.dest = route[1]
+        
+        self.trailer = self.ui.comboBox_trailer.currentText()
+        
+        self.n_passengers = self.ui.spinBox_passengers.value()
+        
         # Make a departure-time widget for each date
         delta = self.ui.dateEdit_first.date().daysTo(self.ui.dateEdit_last.date())
         self.n_dates = delta + 1
@@ -87,34 +113,39 @@ class KombardoPinger(QMainWindow):
         
         # Origin
         parent_id = 'booking'
-        xpath = 'div/form/div/div[3]/div[1]/button'
-        button = self.driver.find_element(By.XPATH, '//*[@id="' + parent_id +'"]/' + xpath)
-        self.wait_for_elem(By.ID, parent_id, self.var['timeout'], self.var['wait'])
-        button.click()
+        button = self.getElement(parent_id, 'div/form/div/div[3]/div[1]/button')
+        self.clickButton(button)
         
-        self.rand_sleep(1)
-        xpath = 'div/form/div/div[3]/div[1]/div/div/div/div/div/button'
-        buttons = self.driver.find_elements(By.XPATH, '//*[@id="' + parent_id +'"]/' + xpath)
+        self.rand_sleep(0.5)
+        buttons = self.getElements(parent_id, 'div/form/div/div[3]/div[1]/div/div/div/div/div/button')
         enum = enumerate(buttons)
-        orig_dict = dict((button.text, idx) for idx, button in enum)
-        
-        orig_str = self.ui.comboBox_route.currentText().split('-')[0]
-        buttons[orig_dict[orig_str]].click()
+        orig_dict = dict((button.text, idx) for idx, button in enum)  # Dictionary from origin name to button index
+        self.clickButton(buttons[orig_dict[self.orig]])
         
         # Destination
-        xpath = 'div/form/div/div[3]/div[2]/button'
-        button = self.driver.find_element(By.XPATH, '//*[@id="' + parent_id +'"]/' + xpath)
-        self.wait_for_elem(By.ID, parent_id, self.var['timeout'], self.var['wait'])
-        button.click()
+        button = self.getElement(parent_id, 'div/form/div/div[3]/div[2]/button')
+        self.clickButton(button)
         
-        self.rand_sleep(1)
-        xpath = 'div/form/div/div[3]/div[2]/div/div/div/div/div/button'
-        buttons = self.driver.find_elements(By.XPATH, '//*[@id="' + parent_id +'"]/' + xpath)
+        self.rand_sleep(0.5)
+        buttons = self.getElements(parent_id, 'div/form/div/div[3]/div[2]/div/div/div/div/div/button')
         enum = enumerate(buttons)
-        orig_dict = dict((button.text, idx) for idx, button in enum)
+        dest_dict = dict((button.text, idx) for idx, button in enum)
+        self.clickButton(buttons[dest_dict[self.dest]])
         
-        orig_str = self.ui.comboBox_route.currentText().split('-')[1]
-        buttons[orig_dict[orig_str]].click()
+        # Passengers
+        field = self.getElement(parent_id, 'div/form/div[3]/div/div[2]/div/div[3]/div/div/div/input')
+        field.send_keys(Keys.BACKSPACE)
+        field.send_keys(self.ui.spinBox_passengers.value())
+        
+        # Trailer
+        if self.ui.comboBox_trailer.currentIndex() > 0:
+            # Tick checkbox
+            button = self.getElement(parent_id, 'div/form/div[3]/div/div[2]/div/div[2]/button')
+            self.clickButton(button)
+            
+            # Select trailer
+            buttons = self.getElements(parent_id, 'div/form/div[3]/div/div[2]/div/div[3]/div[2]/div/div/button')
+            self.clickButton(buttons[self.ui.comboBox_trailer.currentIndex()-1])
         
         #/html/body/div[2]/div/div/section/div/
     
