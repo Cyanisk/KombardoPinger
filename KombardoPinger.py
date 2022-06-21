@@ -15,7 +15,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, QWidget, QStackedWidget
-from PyQt5.QtCore import Qt, QEvent, QObject, pyqtSignal, QMetaObject, pyqtSlot, QCoreApplication, QTimer
+from PyQt5.QtCore import Qt, QEvent, QObject, pyqtSignal, QMetaObject, pyqtSlot, QCoreApplication, QTimer, QDate
 from MainWindow import Ui_MainWindow
 from TimeWidget import TimeWidget
 
@@ -57,15 +57,17 @@ class KombardoPinger(QMainWindow):
         self.rand_sleep(wait)
     
     
-    def getElement(self, parent_id, xpath, timeout=10):
+    def getElement(self, xpath, timeout=10, wait=0):
+        self.rand_sleep(wait)
         button = WebDriverWait(self.driver, timeout).until(
             EC.presence_of_element_located(
-                (By.XPATH, '//*[@id="' + parent_id +'"]/' + xpath)))
+                (By.XPATH, '//*[@id="booking"]/' + xpath)))
         return button
     
     
-    def getElements(self, parent_id, xpath):
-        return self.driver.find_elements(By.XPATH, '//*[@id="' + parent_id +'"]/' + xpath)
+    def getElements(self, xpath, timeour=10, wait=0):
+        self.rand_sleep(wait)
+        return self.driver.find_elements(By.XPATH, '//*[@id="booking"]/' + xpath)
     
     
     def clickButton(self, button, timeout=10, wait=0):
@@ -100,53 +102,57 @@ class KombardoPinger(QMainWindow):
         
         self.n_passengers = self.ui.spinBox_passengers.value()
         
-        # Make a departure-time widget for each date
-        delta = self.ui.dateEdit_first.date().daysTo(self.ui.dateEdit_last.date())
+        self.first_date = self.ui.dateEdit_first.date()
+        self.last_date = self.ui.dateEdit_last.date()
+        delta = self.first_date.daysTo(self.last_date)
         self.n_dates = delta + 1
-        self.time_widgets = [TimeWidget() for i in range(self.n_dates)]
         
-        # Load time page
-        self.loadPageTime(0)
-        self.ui.stackedWidget.setCurrentIndex(1)
         
         # Fill in website form
         
         # Origin
         parent_id = 'booking'
-        button = self.getElement(parent_id, 'div/form/div/div[3]/div[1]/button')
+        button = self.getElement('div/form/div/div[3]/div[1]/button')
         self.clickButton(button)
         
         self.rand_sleep(0.5)
-        buttons = self.getElements(parent_id, 'div/form/div/div[3]/div[1]/div/div/div/div/div/button')
+        buttons = self.getElements('div/form/div/div[3]/div[1]/div/div/div/div/div/button')
         enum = enumerate(buttons)
         orig_dict = dict((button.text, idx) for idx, button in enum)  # Dictionary from origin name to button index
         self.clickButton(buttons[orig_dict[self.orig]])
         
         # Destination
-        button = self.getElement(parent_id, 'div/form/div/div[3]/div[2]/button')
+        button = self.getElement('div/form/div/div[3]/div[2]/button')
         self.clickButton(button)
         
         self.rand_sleep(0.5)
-        buttons = self.getElements(parent_id, 'div/form/div/div[3]/div[2]/div/div/div/div/div/button')
+        buttons = self.getElements('div/form/div/div[3]/div[2]/div/div/div/div/div/button')
         enum = enumerate(buttons)
         dest_dict = dict((button.text, idx) for idx, button in enum)
         self.clickButton(buttons[dest_dict[self.dest]])
         
         # Passengers
-        field = self.getElement(parent_id, 'div/form/div[3]/div/div[2]/div/div[3]/div/div/div/input')
+        field = self.getElement('div/form/div[3]/div/div[2]/div/div[3]/div/div/div/input')
         field.send_keys(Keys.BACKSPACE)
         field.send_keys(self.ui.spinBox_passengers.value())
         
         # Trailer
         if self.ui.comboBox_trailer.currentIndex() > 0:
             # Tick checkbox
-            button = self.getElement(parent_id, 'div/form/div[3]/div/div[2]/div/div[2]/button')
+            button = self.getElement('div/form/div[3]/div/div[2]/div/div[2]/button')
             self.clickButton(button)
             
             # Select trailer
-            buttons = self.getElements(parent_id, 'div/form/div[3]/div/div[2]/div/div[3]/div[2]/div/div/button')
+            buttons = self.getElements('div/form/div[3]/div/div[2]/div/div[3]/div[2]/div/div/button', wait=1)
             self.clickButton(buttons[self.ui.comboBox_trailer.currentIndex()-1])
         
+        # Next page
+        button = self.getElement('div/form/div[3]/div/button')
+        self.clickButton(button)
+        
+        # Load time page
+        self.loadPageTime(0)
+        self.ui.stackedWidget.setCurrentIndex(1)
         #/html/body/div[2]/div/div/section/div/
     
     
@@ -154,9 +160,32 @@ class KombardoPinger(QMainWindow):
         self.ui.dateEdit_time.setDate(self.ui.dateEdit_first.date())
         self.ui.dateEdit_time.setMinimumDate(self.ui.dateEdit_first.date())
         self.ui.dateEdit_time.setMaximumDate(self.ui.dateEdit_last.date())
+        
+        # Get some data on relevant dates
+        day_diff = QDate.currentDate().daysTo(self.first_date)
+        now_dow = QDate.currentDate().dayOfWeek()
+        dep_dow = self.first_date.dayOfWeek()
+        week_diff = int((day_diff + now_dow - 1)/7)
+        
+        # Switch to weekly view instead of biweekly
+        button = self.getElement('div/form/div/div[3]/div/div/button[' +
+                                 str(now_dow) + ']')
+        self.clickButton(button)
+        
+        # Progress forward to the week matching the first departure date
+        button = self.getElement('div/form/div[1]/div[3]/button')
+        for i in range(week_diff):
+            self.clickButton(button)
+        
+        
+        
+        # Get button matching the first departure date
+        button = self.getElement('div/form/div[1]/div[2]/div/div/button[' +
+                                 str(dep_dow) + ']')
+        self.clickButton(button)
+        
         # Create a stackedwidget page for each date (after removing the existing stackedwidget)
         self.ui.page_time.layout().removeWidget(self.ui.page_time.layout().itemAt(3).widget())
-        
         self.stackedWidget_time = QStackedWidget()
         self.ui.page_time.layout().insertWidget(3, self.stackedWidget_time, stretch=1)
         for i in range(self.n_dates):
