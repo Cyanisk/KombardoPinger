@@ -52,8 +52,10 @@ class KombardoPinger(QMainWindow):
         time.sleep(sec + sec*u*noise)
         
         
-    def wait_for_elem(self, by, addr, timeout=10, wait=0):
-        WebDriverWait(self.driver, timeout).until(EC.element_to_be_clickable((by, addr)))
+    def wait_for_elem(self, xpath, timeout=10, wait=0):
+        WebDriverWait(self.driver, timeout).until(
+            EC.element_to_be_clickable(
+                (By.XPATH, '//*[@id="booking"]/' + xpath)))
         self.rand_sleep(wait)
     
     
@@ -75,6 +77,13 @@ class KombardoPinger(QMainWindow):
         self.rand_sleep(wait)
         button.click()
         
+    
+    def getDepTimes(self, deps):
+        deps_times = []
+        for dep in deps:
+            deps_times.append(dep.find_element(By.XPATH, 'div/button/button/div[1]/div[1]/div[2]').text)
+        return deps_times
+        
         
     def loadPageDate(self):
         self.ui.dateEdit_first.setDate(date.today())
@@ -87,8 +96,9 @@ class KombardoPinger(QMainWindow):
         self.driver.get('https://www.bornholmslinjen.dk/booking')
         
         # Decline unnecessary cookies
-        button = 'declineButton'
-        self.wait_for_elem(By.ID, button)
+        WebDriverWait(self.driver, 10).until(EC.element_to_be_clickable((By.ID, 'declineButton')))
+        #button = 'declineButton'
+        #self.wait_for_elem(By.ID, button)
         self.driver.find_element(By.XPATH, '//*[@id="declineButton"]').click()
     
     
@@ -173,16 +183,29 @@ class KombardoPinger(QMainWindow):
         self.clickButton(button)
         
         # Progress forward to the week matching the first departure date
-        button = self.getElement('div/form/div[1]/div[3]/button')
+        forward = self.getElement('div/form/div[1]/div[3]/button')
         for i in range(week_diff):
+            self.clickButton(forward)
+        
+        
+        self.rand_sleep(2)
+        dow = dep_dow
+        for i in range(self.n_dates):
+            button = self.getElement('div/form/div[1]/div[2]/div/div/button[' +
+                                     str(dow) + ']')
             self.clickButton(button)
+            
+            self.wait_for_elem('div/form/div[3]/div')
+            elems = self.getElements('div/form/div')[2:]
+            print(self.getDepTimes(elems))
+            
+            dow += 1
+            if dow == 8:
+                dow -= 7
+                self.clickButton(forward)
         
-        
-        
-        # Get button matching the first departure date
-        button = self.getElement('div/form/div[1]/div[2]/div/div/button[' +
-                                 str(dep_dow) + ']')
-        self.clickButton(button)
+        #/html/body/div[2]/div/div/section/div/div/form/div[3]/div/button
+        #/html/body/div[2]/div/div/section/div/div/form/div[3]
         
         # Create a stackedwidget page for each date (after removing the existing stackedwidget)
         self.ui.page_time.layout().removeWidget(self.ui.page_time.layout().itemAt(3).widget())
