@@ -19,6 +19,11 @@ from PyQt5.QtCore import Qt, QEvent, QObject, pyqtSignal, QMetaObject, pyqtSlot,
 from MainWindow import Ui_MainWindow
 from TimeWidget import TimeWidget
 
+#TODO: Check if trailer tickbox is ticked
+#TODO: Get moving back and forth through the app work
+#TODO: Perhaps change parameters along with the user?
+#TODO: Handle the case when there are no departures
+
 
 class KombardoPinger(QMainWindow):
     
@@ -40,11 +45,20 @@ class KombardoPinger(QMainWindow):
         # Set up date screen
         self.loadPageDate()
     
-        # Events
+        # Events (datepage)
         self.ui.pushButton_datenext.clicked.connect(self.dateNext)
-        self.ui.pushButton_timeprev.clicked.connect(self.timePrev)
         self.ui.dateEdit_first.dateChanged.connect(self.fixLastDate)
         self.ui.dateEdit_last.dateChanged.connect(self.fixFirstDate)
+        
+        # Events (timepage)
+        self.ui.pushButton_timeprev.clicked.connect(self.timePrev)
+        self.ui.pushButton_timenext.clicked.connect(self.timeNext)
+        self.ui.pushButton_nextdate.clicked.connect(self.nextDate)
+        self.ui.pushButton_prevdate.clicked.connect(self.prevDate)
+        self.ui.dateEdit_time.dateChanged.connect(self.changeTimeWidget)
+        
+        # Events (notipage)
+        self.ui.pushButton_notiprev.clicked.connect(self.notiPrev)
     
     
     def rand_sleep(self, sec, u=0.2):
@@ -121,7 +135,6 @@ class KombardoPinger(QMainWindow):
         # Fill in website form
         
         # Origin
-        parent_id = 'booking'
         button = self.getElement('div/form/div/div[3]/div[1]/button')
         self.clickButton(button)
         
@@ -187,37 +200,42 @@ class KombardoPinger(QMainWindow):
         for i in range(week_diff):
             self.clickButton(forward)
         
-        
+        # Create a TimeWidget for each departure date
+        self.timeWidgets = []
         self.rand_sleep(2)
         dow = dep_dow
         for i in range(self.n_dates):
-            button = self.getElement('div/form/div[1]/div[2]/div/div/button[' +
-                                     str(dow) + ']')
-            self.clickButton(button)
-            
-            self.wait_for_elem('div/form/div[3]/div')
-            elems = self.getElements('div/form/div')[2:]
-            print(self.getDepTimes(elems))
-            
-            dow += 1
+            # Progress to next week when needed
             if dow == 8:
                 dow -= 7
                 self.clickButton(forward)
-        
-        #/html/body/div[2]/div/div/section/div/div/form/div[3]/div/button
-        #/html/body/div[2]/div/div/section/div/div/form/div[3]
+            
+            # Click on date button to reveal departing times
+            button = self.getElement('div/form/div[1]/div[2]/div/div/button[' +
+                                     str(dow) + ']')
+            self.clickButton(button)
+            self.wait_for_elem('div/form/div[3]/div')
+            elems = self.getElements('div/form/div')[2:]
+            dep_times = self.getDepTimes(elems)
+            
+            self.timeWidgets.append(TimeWidget(dep_times))
+            
+            dow += 1
         
         # Create a stackedwidget page for each date (after removing the existing stackedwidget)
-        self.ui.page_time.layout().removeWidget(self.ui.page_time.layout().itemAt(3).widget())
-        self.stackedWidget_time = QStackedWidget()
-        self.ui.page_time.layout().insertWidget(3, self.stackedWidget_time, stretch=1)
-        for i in range(self.n_dates):
-            self.stackedWidget_time.addWidget(TimeWidget())
-    
+        self.ui.time_layout.removeWidget(self.ui.time_layout.itemAt(2).widget())
+        self.ui.stackedWidget_time = QStackedWidget()
+        self.ui.time_layout.insertWidget(2, self.ui.stackedWidget_time)
+        for w in self.timeWidgets:
+            self.ui.stackedWidget_time.addWidget(w)
+        
     
     def timePrev(self):
         self.ui.stackedWidget.setCurrentIndex(0)
     
+    
+    def timeNext(self):
+        self.ui.stackedWidget.setCurrentIndex(2)
     
     def fixLastDate(self):
         if self.ui.dateEdit_first.date() > self.ui.dateEdit_last.date():
@@ -227,6 +245,39 @@ class KombardoPinger(QMainWindow):
     def fixFirstDate(self):
         if self.ui.dateEdit_first.date() > self.ui.dateEdit_last.date():
             self.ui.dateEdit_first.setDate(self.ui.dateEdit_last.date())
+    
+    
+    def nextDate(self):
+        self.ui.dateEdit_time.setDate(
+            self.ui.dateEdit_time.date().addDays(1))
+    
+    
+    def prevDate(self):
+        self.ui.dateEdit_time.setDate(
+            self.ui.dateEdit_time.date().addDays(-1))
+    
+    
+    def changeTimeWidget(self):
+        idx = self.first_date.daysTo(self.ui.dateEdit_time.date())
+        self.ui.stackedWidget_time.setCurrentIndex(idx)
+        
+        # Disable left/right buttons as needed
+        self.ui.pushButton_nextdate.setEnabled(True)
+        self.ui.pushButton_prevdate.setEnabled(True)
+        
+        if idx == 0:
+            self.ui.pushButton_prevdate.setEnabled(False)
+        
+        if idx == self.n_dates - 1:
+            self.ui.pushButton_nextdate.setEnabled(False)
+    
+    
+    def notiPrev(self):
+        self.ui.stackedWidget.setCurrentIndex(1)
+        
+        
+    #def notiNext(self):
+        
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)

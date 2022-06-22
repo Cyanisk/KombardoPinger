@@ -18,8 +18,6 @@ class Ui_TimeWidget(object):
         self.verticalLayout = QtWidgets.QVBoxLayout(TimeWidget)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout.setObjectName("verticalLayout")
-        spacerItem = QtWidgets.QSpacerItem(20, 68, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout.addItem(spacerItem)
         self.horizontalLayout_11 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_11.setObjectName("horizontalLayout_11")
         self.label_17 = QtWidgets.QLabel(TimeWidget)
@@ -41,8 +39,6 @@ class Ui_TimeWidget(object):
         self.horizontalLayout_21.addWidget(self.comboBox_timelast)
         self.horizontalLayout_11.addLayout(self.horizontalLayout_21)
         self.verticalLayout.addLayout(self.horizontalLayout_11)
-        spacerItem1 = QtWidgets.QSpacerItem(20, 69, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout.addItem(spacerItem1)
 
         self.retranslateUi(TimeWidget)
         QtCore.QMetaObject.connectSlotsByName(TimeWidget)
