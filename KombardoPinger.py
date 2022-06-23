@@ -26,8 +26,8 @@ from TimeWidget import TimeWidget
 # TODO: Implement global timerange
 # TODO: "Reset to any-departure-time" ?
 # TODO: Ask user to wait while departure times load
-# TODO: Find a way for the search loop to run while allowing user to press buttons
 # TODO: Set up mailing stuff
+# TODO: Integers in variables.txt
 
 
 class KombardoPinger(QMainWindow):
@@ -67,6 +67,7 @@ class KombardoPinger(QMainWindow):
         self.ui.pushButton_search.clicked.connect(self.notiSearch)
 
         # Events (searchpage)
+        self.ui.pushButton_extend.clicked.connect(self.extendTime)
         self.ui.pushButton_end.clicked.connect(self.endSearch)
 
     def rand_sleep(self, sec, u=0.2):
@@ -293,16 +294,26 @@ class KombardoPinger(QMainWindow):
             return
 
         self.ui.stackedWidget.setCurrentIndex(3)
+        self.end_time = time.time() + 50
         self.searchLoop()
+    
+    def extendTime(self):
+        self.end_time += 10
+        self.ui.pushButton_extend.setEnabled(False)
 
     def endSearch(self):
         self.driver.close()
         self.close()
 
     def searchLoop(self):
-        for i in range(5):
-            self.rand_sleep(5)
-        return
+        time_until_end = self.end_time - time.time()
+        if time_until_end > 0:
+            print(time_until_end)
+            if time_until_end < 10:
+                self.ui.pushButton_extend.setEnabled(True)
+            QTimer.singleShot(5000, self.searchLoop)
+        else:
+            self.endSearch()
 
 
 if __name__ == '__main__':
