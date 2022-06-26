@@ -1,7 +1,7 @@
 import sys
 import os
 import random
-import datetime
+import re
 from datetime import date
 import time
 
@@ -14,8 +14,8 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
-from PyQt5.QtWidgets import QApplication, QMainWindow, QDialog, QWidget, QStackedWidget
-from PyQt5.QtCore import Qt, QEvent, QObject, pyqtSignal, QMetaObject, pyqtSlot, QCoreApplication, QTimer, QDate
+from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget
+from PyQt5.QtCore import QTimer, QTime, QDate
 from MainWindow import Ui_MainWindow
 from TimeWidget import TimeWidget
 
@@ -103,6 +103,10 @@ class KombardoPinger(QMainWindow):
             deps_times.append(dep.find_element(
                 By.XPATH, 'div/button/button/div[1]/div[1]/div[2]').text)
         return deps_times
+    
+    def getAvailable(self, deps):
+        # Last piece of text is 'Udsolgt' if tickets are unavailable
+        return [dep.text.split()[-1] != 'Udsolgt' for dep in deps]
 
     def loadPageDate(self):
         self.ui.dateEdit_first.setDate(date.today())
@@ -197,7 +201,8 @@ class KombardoPinger(QMainWindow):
         # Get some data on relevant dates
         day_diff = QDate.currentDate().daysTo(self.first_date)
         now_dow = QDate.currentDate().dayOfWeek()
-        dep_dow = self.first_date.dayOfWeek()
+        self.first_dow = self.first_date.dayOfWeek()
+        self.last_dow = self.last_date.dayOfWeek()
         week_diff = int((day_diff + now_dow - 1)/7)
 
         # Switch to weekly view instead of biweekly
@@ -213,7 +218,7 @@ class KombardoPinger(QMainWindow):
         # Create a TimeWidget for each departure date
         self.timeWidgets = []
         self.rand_sleep(1)
-        dow = dep_dow
+        dow = self.first_dow
         for i in range(self.n_dates):
             # Progress to next week when needed
             if dow == 8:
@@ -227,8 +232,9 @@ class KombardoPinger(QMainWindow):
             self.wait_for_elem('div/form/div[3]/div')
             elems = self.getElements('div/form/div')[2:]
             dep_times = self.getDepTimes(elems)
+            available = self.getAvailable(elems)
 
-            self.timeWidgets.append(TimeWidget(dep_times))
+            self.timeWidgets.append(TimeWidget(elems, dep_times, available))
 
             dow += 1
 
@@ -294,22 +300,46 @@ class KombardoPinger(QMainWindow):
             return
 
         self.ui.stackedWidget.setCurrentIndex(3)
-        self.end_time = time.time() + 50
-        self.searchLoop()
+        self.start_time = QTime.currentTime()
+        self.end_time =  self.start_time.addSecs(50)
+        self.startSearchLoop()
     
     def extendTime(self):
-        self.end_time += 10
+        self.end_time = self.end_time.addSecs(20)
         self.ui.pushButton_extend.setEnabled(False)
+        
+        # Update search-end time text
+        text = self.ui.label_endTime.text()
+        end_time = self.end_time.toString('hh:mm')
+        text = re.sub('..:..', end_time, text)
+        self.ui.label_endTime.setText(text)
 
     def endSearch(self):
         self.driver.close()
         self.close()
+        
+    def startSearchLoop(self):
+        # Display search-end time text
+        text = self.ui.label_endTime.text()
+        end_time = self.end_time.toString('hh:mm')
+        text = re.sub('..:..', end_time, text)
+        self.ui.label_endTime.setText(text)
+        
+        # Print currently available departures
+        date = self.first_date
+        
+        for i in range(self.n_dates):
+            print(date)
+            print(self.timeWidgets[i].available)
+            date = date.addDays(1)
+        
+        self.searchLoop()
 
     def searchLoop(self):
-        time_until_end = self.end_time - time.time()
+        time_until_end = QTime.currentTime().secsTo(self.end_time)
         if time_until_end > 0:
             print(time_until_end)
-            if time_until_end < 10:
+            if time_until_end < 20:
                 self.ui.pushButton_extend.setEnabled(True)
             QTimer.singleShot(5000, self.searchLoop)
         else:

@@ -2,9 +2,13 @@ from TimeWidgetUi import Ui_TimeWidget
 from PyQt5 import QtWidgets
 
 class TimeWidget(QtWidgets.QWidget, Ui_TimeWidget):
-    def __init__(self, dep_times, parent=None):
+    def __init__(self, elems, dep_times, available, parent=None):
         super(TimeWidget, self).__init__(parent)
         self.setupUi(self)
+        
+        self.elems = elems
+        self.dep_times = dep_times
+        self.available = available
         
         # Insert departure times
         self.comboBox_timefirst.addItems(dep_times)

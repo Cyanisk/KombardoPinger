@@ -426,7 +426,7 @@
          </layout>
         </item>
         <item>
-         <layout class="QVBoxLayout" name="time_layout" stretch="0,0,0,1,0,0,0">
+         <layout class="QVBoxLayout" name="verticalLayou_4" stretch="0,0,1,0,0">
           <item>
            <widget class="QLabel" name="label_18">
             <property name="text">
@@ -435,47 +435,101 @@
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="label_8">
-            <property name="text">
-             <string>Vælg afgange for denne dato:</string>
-            </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <widget class="QStackedWidget" name="stackedWidget_time">
-            <property name="currentIndex">
+           <layout class="QHBoxLayout" name="horizontalLayout_10">
+            <property name="spacing">
              <number>0</number>
             </property>
-            <widget class="QWidget" name="page_3">
-             <layout class="QVBoxLayout" name="verticalLayout">
+            <item>
+             <widget class="Line" name="line_3">
+              <property name="frameShadow">
+               <enum>QFrame::Plain</enum>
+              </property>
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QVBoxLayout" name="time_layout">
+              <property name="spacing">
+               <number>0</number>
+              </property>
               <item>
-               <widget class="QLabel" name="label_14">
+               <widget class="Line" name="line">
+                <property name="frameShadow">
+                 <enum>QFrame::Plain</enum>
+                </property>
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QLabel" name="label_8">
                 <property name="text">
-                 <string>Hvis du ser dette, har jeg lavet en fejl :)</string>
+                 <string>Vælg afgange for denne dato:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QStackedWidget" name="stackedWidget_time">
+                <property name="currentIndex">
+                 <number>0</number>
+                </property>
+                <widget class="QWidget" name="page_3">
+                 <layout class="QVBoxLayout" name="verticalLayout">
+                  <item>
+                   <widget class="QLabel" name="label_14">
+                    <property name="text">
+                     <string>Hvis du ser dette, har jeg lavet en fejl :)</string>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </widget>
+                <widget class="QWidget" name="page_4">
+                 <widget class="QLabel" name="label_16">
+                  <property name="geometry">
+                   <rect>
+                    <x>50</x>
+                    <y>30</y>
+                    <width>301</width>
+                    <height>31</height>
+                   </rect>
+                  </property>
+                  <property name="text">
+                   <string>Hvis du ser dette, har jeg lavet en stor fejl :)</string>
+                  </property>
+                 </widget>
+                </widget>
+               </widget>
+              </item>
+              <item>
+               <widget class="Line" name="line_4">
+                <property name="frameShadow">
+                 <enum>QFrame::Plain</enum>
+                </property>
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
                 </property>
                </widget>
               </item>
              </layout>
-            </widget>
-            <widget class="QWidget" name="page_4">
-             <widget class="QLabel" name="label_16">
-              <property name="geometry">
-               <rect>
-                <x>50</x>
-                <y>30</y>
-                <width>301</width>
-                <height>31</height>
-               </rect>
+            </item>
+            <item>
+             <widget class="Line" name="line_2">
+              <property name="frameShadow">
+               <enum>QFrame::Plain</enum>
               </property>
-              <property name="text">
-               <string>Hvis du ser dette, har jeg lavet en stor fejl :)</string>
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
               </property>
              </widget>
-            </widget>
-           </widget>
+            </item>
+           </layout>
           </item>
           <item>
            <widget class="QLabel" name="label_10">
@@ -488,58 +542,115 @@
            </widget>
           </item>
           <item>
-           <widget class="QLabel" name="label_11">
-            <property name="text">
-             <string>Vælg tidsinterval for all afgange:</string>
+           <layout class="QHBoxLayout" name="horizontalLayout_11">
+            <property name="spacing">
+             <number>0</number>
             </property>
-            <property name="alignment">
-             <set>Qt::AlignCenter</set>
-            </property>
-           </widget>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_8">
             <item>
-             <widget class="QLabel" name="label_12">
-              <property name="text">
-               <string>Afgangstidspunkt:</string>
+             <widget class="Line" name="line_5">
+              <property name="frameShadow">
+               <enum>QFrame::Plain</enum>
+              </property>
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
               </property>
              </widget>
             </item>
             <item>
-             <layout class="QHBoxLayout" name="horizontalLayout_9">
+             <layout class="QVBoxLayout" name="verticalLayout_5">
+              <property name="spacing">
+               <number>0</number>
+              </property>
               <item>
-               <widget class="QLabel" name="label_13">
-                <property name="text">
-                 <string>Mellem</string>
+               <widget class="Line" name="line_8">
+                <property name="frameShadow">
+                 <enum>QFrame::Plain</enum>
+                </property>
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QTimeEdit" name="timeEdit"/>
-              </item>
-              <item>
-               <widget class="QLabel" name="label_17">
+               <widget class="QLabel" name="label_11">
                 <property name="text">
-                 <string>og</string>
+                 <string>Vælg tidsinterval for all afgange:</string>
+                </property>
+                <property name="alignment">
+                 <set>Qt::AlignCenter</set>
                 </property>
                </widget>
               </item>
               <item>
-               <widget class="QTimeEdit" name="timeEdit_2">
-                <property name="dateTime">
-                 <datetime>
-                  <hour>23</hour>
-                  <minute>59</minute>
-                  <second>59</second>
-                  <year>2000</year>
-                  <month>1</month>
-                  <day>1</day>
-                 </datetime>
+               <layout class="QHBoxLayout" name="horizontalLayout_8">
+                <property name="spacing">
+                 <number>0</number>
+                </property>
+                <item>
+                 <widget class="QLabel" name="label_12">
+                  <property name="text">
+                   <string>Afgangstidspunkt:</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <layout class="QHBoxLayout" name="horizontalLayout_9">
+                  <item>
+                   <widget class="QLabel" name="label_13">
+                    <property name="text">
+                     <string>Mellem</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QTimeEdit" name="timeEdit"/>
+                  </item>
+                  <item>
+                   <widget class="QLabel" name="label_17">
+                    <property name="text">
+                     <string>og</string>
+                    </property>
+                   </widget>
+                  </item>
+                  <item>
+                   <widget class="QTimeEdit" name="timeEdit_2">
+                    <property name="dateTime">
+                     <datetime>
+                      <hour>23</hour>
+                      <minute>59</minute>
+                      <second>59</second>
+                      <year>2000</year>
+                      <month>1</month>
+                      <day>1</day>
+                     </datetime>
+                    </property>
+                   </widget>
+                  </item>
+                 </layout>
+                </item>
+               </layout>
+              </item>
+              <item>
+               <widget class="Line" name="line_7">
+                <property name="frameShadow">
+                 <enum>QFrame::Plain</enum>
+                </property>
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
                 </property>
                </widget>
               </item>
              </layout>
+            </item>
+            <item>
+             <widget class="Line" name="line_6">
+              <property name="frameShadow">
+               <enum>QFrame::Plain</enum>
+              </property>
+              <property name="orientation">
+               <enum>Qt::Vertical</enum>
+              </property>
+             </widget>
             </item>
            </layout>
           </item>
@@ -831,6 +942,16 @@
            </widget>
           </item>
           <item>
+           <widget class="QLabel" name="label_endTime">
+            <property name="text">
+             <string>Søgning slutter ca. kl. 00:00</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
+          </item>
+          <item>
            <spacer name="verticalSpacer_21">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
@@ -862,6 +983,16 @@
              </widget>
             </item>
            </layout>
+          </item>
+          <item>
+           <widget class="QLabel" name="label_27">
+            <property name="text">
+             <string>Søgning kan forlænges når der er under 2 timer tilbage.</string>
+            </property>
+            <property name="alignment">
+             <set>Qt::AlignCenter</set>
+            </property>
+           </widget>
           </item>
           <item>
            <spacer name="verticalSpacer_22">
