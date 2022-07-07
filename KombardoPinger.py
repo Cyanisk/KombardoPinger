@@ -13,24 +13,44 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import ElementClickInterceptedException
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget
-from PyQt5.QtCore import QTimer, QTime, QDate
+from PyQt5.QtCore import QTimer, QTime, QDate, QDateTime
 from MainWindow import Ui_MainWindow
 from TimeWidget import TimeWidget
 
-# TODO: Check if trailer tickbox is ticked
 # TODO: Get moving back and forth through the app work
 # TODO: Perhaps change parameters along with the user?
 # TODO: Handle the case when there are no departures
+# TODO: Handle when a tracked departure is passed
 # TODO: Implement global timerange
-# TODO: "Reset to any-departure-time" ?
+# TODO: Button to reset departure time range
 # TODO: Ask user to wait while departure times load
 # TODO: Set up mailing stuff
 # TODO: Integers in variables.txt
-
+# TODO: Use timeout in getElements
+# TODO: Maybe put more variables in the GUI?
+# TODO: Rename functions
 
 class KombardoPinger(QMainWindow):
+    
+    # List of attributes:
+    # self.ui
+    # self.var
+    # self.driver
+    # self.orig
+    # self.dest
+    # self.trailer
+    # self.n_passengers
+    # self.first_date
+    # self.last_date
+    # self.n_dates
+    # self.time_widgets
+    # self.noti_email
+    # self.search_freq
+    # self.start_time
+    # self.end_time
 
     def __init__(self):
         super().__init__()
@@ -46,6 +66,15 @@ class KombardoPinger(QMainWindow):
             for line in v:
                 (key, val) = line.split()
                 self.var[key] = val
+        
+        # Convert some variables to ints
+        v_list = ['init_search_hours', 'extend_search_hours', 'timeout_secs']
+        for v in v_list:
+            self.var[v] = int(self.var[v])
+        
+        self.months = {'Januar':1, 'Februar':2, 'Marts':3, 'April':4,
+                       'Maj':5, 'Juni':6, 'Juli':7, 'August':8,
+                       'September':9, 'Oktober':10, 'November':11, 'December':12}
 
         # Set up date screen
         self.loadPageDate()
@@ -69,45 +98,11 @@ class KombardoPinger(QMainWindow):
         # Events (searchpage)
         self.ui.pushButton_extend.clicked.connect(self.extendTime)
         self.ui.pushButton_end.clicked.connect(self.endSearch)
-
-    def rand_sleep(self, sec, u=0.2):
-        noise = random.random()*2 - 1
-        time.sleep(sec + sec*u*noise)
-
-    def wait_for_elem(self, xpath, timeout=20, wait=0):
-        WebDriverWait(self.driver, timeout).until(
-            EC.element_to_be_clickable(
-                (By.XPATH, '//*[@id="booking"]/' + xpath)))
-        self.rand_sleep(wait)
-
-    def getElement(self, xpath, timeout=20, wait=0):
-        self.rand_sleep(wait)
-        button = WebDriverWait(self.driver, timeout).until(
-            EC.presence_of_element_located(
-                (By.XPATH, '//*[@id="booking"]/' + xpath)))
-        return button
-
-    def getElements(self, xpath, timeour=20, wait=0):
-        self.rand_sleep(wait)
-        return self.driver.find_elements(By.XPATH, '//*[@id="booking"]/' + xpath)
-
-    def clickButton(self, button, timeout=20, wait=0):
-        WebDriverWait(self.driver, timeout).until(
-            EC.element_to_be_clickable(button))
-        self.rand_sleep(wait)
-        button.click()
-
-    def getDepTimes(self, deps):
-        deps_times = []
-        for dep in deps:
-            deps_times.append(dep.find_element(
-                By.XPATH, 'div/button/button/div[1]/div[1]/div[2]').text)
-        return deps_times
+        
+    ####### Main flow functions #######
+    # Functions handling the flow of the application (loading pages, progressing)
+    # Many of these functions use helper functions
     
-    def getAvailable(self, deps):
-        # Last piece of text is 'Udsolgt' if tickets are unavailable
-        return [dep.text.split()[-1] != 'Udsolgt' for dep in deps]
-
     def loadPageDate(self):
         self.ui.dateEdit_first.setDate(date.today())
         self.ui.dateEdit_first.setMinimumDate(date.today())
@@ -121,136 +116,283 @@ class KombardoPinger(QMainWindow):
         # Decline unnecessary cookies
         WebDriverWait(self.driver, 10).until(
             EC.element_to_be_clickable((By.ID, 'declineButton')))
-        #button = 'declineButton'
-        #self.wait_for_elem(By.ID, button)
         self.driver.find_element(By.XPATH, '//*[@id="declineButton"]').click()
-
+        
     def dateNext(self):
         # Save info
-        route = self.ui.comboBox_route.currentText().split('-')
-        self.orig = route[0]
-        self.dest = route[1]
-
+        self.route = self.ui.comboBox_route.currentText().split('-')
         self.trailer = self.ui.comboBox_trailer.currentText()
-
         self.n_passengers = self.ui.spinBox_passengers.value()
 
         self.first_date = self.ui.dateEdit_first.date()
         self.last_date = self.ui.dateEdit_last.date()
+        
         delta = self.first_date.daysTo(self.last_date)
-        self.n_dates = delta + 1
+        self.n_dates = 1 + delta
 
         # Fill in website form
+        self.fillFirstPage()
 
-        # Origin
-        button = self.getElement('div/form/div/div[3]/div[1]/button')
-        self.clickButton(button)
-
-        self.rand_sleep(0.5)
-        buttons = self.getElements(
-            'div/form/div/div[3]/div[1]/div/div/div/div/div/button')
-        enum = enumerate(buttons)
-        # Dictionary from origin name to button index
-        orig_dict = dict((button.text, idx) for idx, button in enum)
-        self.clickButton(buttons[orig_dict[self.orig]])
-
-        # Destination
-        button = self.getElement('div/form/div/div[3]/div[2]/button')
-        self.clickButton(button)
-
-        self.rand_sleep(0.5)
-        buttons = self.getElements(
-            'div/form/div/div[3]/div[2]/div/div/div/div/div/button')
-        enum = enumerate(buttons)
-        dest_dict = dict((button.text, idx) for idx, button in enum)
-        self.clickButton(buttons[dest_dict[self.dest]])
-
-        # Passengers
-        field = self.getElement(
-            'div/form/div[3]/div/div[2]/div/div[3]/div/div/div/input')
-        field.send_keys(Keys.BACKSPACE)
-        field.send_keys(self.ui.spinBox_passengers.value())
-
-        # Trailer
-        if self.ui.comboBox_trailer.currentIndex() > 0:
-            # Tick checkbox
-            button = self.getElement(
-                'div/form/div[3]/div/div[2]/div/div[2]/button')
-            self.clickButton(button)
-
-            # Select trailer
-            buttons = self.getElements(
-                'div/form/div[3]/div/div[2]/div/div[3]/div[2]/div/div/button', wait=1)
-            self.clickButton(
-                buttons[self.ui.comboBox_trailer.currentIndex()-1])
+        # Load time page
+        self.loadPageTime()
+        self.ui.stackedWidget.setCurrentIndex(1)
+    
+    def fillFirstPage(self):
+        # Filling trailer can generate additional elements, therefore it's
+        # easiest if trailer is filled last
+        self.fillRoute()
+        self.fillPassengers()
+        self.fillTrailer()
 
         # Next page
         button = self.getElement('div/form/div[3]/div/button')
         self.clickButton(button)
-
-        # Load time page
-        self.loadPageTime(0)
-        self.ui.stackedWidget.setCurrentIndex(1)
-        # /html/body/div[2]/div/div/section/div/
-
-    def loadPageTime(self, date_idx):
+    
+    def loadPageTime(self):
         self.ui.dateEdit_time.setDate(self.ui.dateEdit_first.date())
         self.ui.dateEdit_time.setMinimumDate(self.ui.dateEdit_first.date())
         self.ui.dateEdit_time.setMaximumDate(self.ui.dateEdit_last.date())
 
-        # Get some data on relevant dates
-        day_diff = QDate.currentDate().daysTo(self.first_date)
-        now_dow = QDate.currentDate().dayOfWeek()
-        self.first_dow = self.first_date.dayOfWeek()
-        self.last_dow = self.last_date.dayOfWeek()
-        week_diff = int((day_diff + now_dow - 1)/7)
-
         # Switch to weekly view instead of biweekly
+        now_dow = QDate.currentDate().dayOfWeek()
         button = self.getElement('div/form/div/div[3]/div/div/button[' +
                                  str(now_dow) + ']')
         self.clickButton(button)
 
-        # Progress forward to the week matching the first departure date
-        forward = self.getElement('div/form/div[1]/div[3]/button')
-        for i in range(week_diff):
-            self.clickButton(forward)
-
         # Create a TimeWidget for each departure date
-        self.timeWidgets = []
-        self.rand_sleep(1)
-        dow = self.first_dow
-        for i in range(self.n_dates):
-            # Progress to next week when needed
-            if dow == 8:
-                dow -= 7
-                self.clickButton(forward)
-
-            # Click on date button to reveal departing times
-            button = self.getElement('div/form/div[1]/div[2]/div/div/button[' +
-                                     str(dow) + ']')
-            self.clickButton(button)
-            self.wait_for_elem('div/form/div[3]/div')
-            elems = self.getElements('div/form/div')[2:]
-            dep_times = self.getDepTimes(elems)
-            available = self.getAvailable(elems)
-
-            self.timeWidgets.append(TimeWidget(elems, dep_times, available))
-
-            dow += 1
-
-        # Create a stackedwidget page for each date (after removing the existing stackedwidget)
-        self.ui.time_layout.removeWidget(
-            self.ui.time_layout.itemAt(2).widget())
-        self.ui.stackedWidget_time = QStackedWidget()
-        self.ui.time_layout.insertWidget(2, self.ui.stackedWidget_time)
-        for w in self.timeWidgets:
-            self.ui.stackedWidget_time.addWidget(w)
-
+        self.setupTimeWidgets()      
+    
     def timePrev(self):
         self.ui.stackedWidget.setCurrentIndex(0)
 
     def timeNext(self):
         self.ui.stackedWidget.setCurrentIndex(2)
+        
+    def notiPrev(self):
+        self.ui.stackedWidget.setCurrentIndex(1)
+
+    def notiSearch(self):
+        
+        mail = self.getMailAddress()
+        if mail == None:
+            return
+        
+        self.noti_email = mail
+        self.search_freq = self.ui.spinBox_minutes.value() * 60000
+
+        self.ui.stackedWidget.setCurrentIndex(3)
+        self.start_time = QDateTime.currentDateTime()
+        self.end_time =  self.start_time.addSecs(self.var['init_search_hours'] * 3600)
+        self.startSearchLoop()
+    
+    def extendTime(self):
+        self.end_time = self.end_time.addSecs(self.var['extend_search_hours'] * 3600)
+        self.ui.pushButton_extend.setEnabled(False)
+        
+        # Update search-end time text
+        text = self.ui.label_endTime.text()
+        end_time = self.end_time.toString('hh:mm')
+        text = re.sub('..:..', end_time, text)
+        self.ui.label_endTime.setText(text)
+    
+    def endSearch(self):
+        self.driver.close()
+        self.close()
+    
+    ####### General helper functions #######
+    # Helper functions which can be used in many parts of the application
+
+    def rand_sleep(self, sec, u=0.2):
+        noise = random.random()*2 - 1
+        time.sleep(sec + sec*u*noise)
+
+    def wait_for_elem(self, xpath, timeout=-1, wait=0):
+        if timeout < 0:
+            timeout = self.var['timeout_secs']
+            
+        WebDriverWait(self.driver, timeout).until(
+            EC.element_to_be_clickable(
+                (By.XPATH, '//*[@id="booking"]/' + xpath)))
+        self.rand_sleep(wait)
+
+    def getElement(self, xpath, timeout=-1, wait=0):
+        if timeout < 0:
+            timeout = self.var['timeout_secs']
+            
+        self.rand_sleep(wait)
+        button = WebDriverWait(self.driver, timeout).until(
+            EC.presence_of_element_located(
+                (By.XPATH, '//*[@id="booking"]/' + xpath)))
+        return button
+
+    def getElements(self, xpath, timeout=-1, wait=0):
+        if timeout < 0:
+            timeout = self.var['timeout_secs']
+            
+        self.rand_sleep(wait)
+        return self.driver.find_elements(By.XPATH, '//*[@id="booking"]/' + xpath)
+
+    def clickButton(self, button, timeout=-1, wait=0):
+        if timeout < 0:
+            timeout = self.var['timeout_secs']
+            
+        WebDriverWait(self.driver, timeout).until(
+            EC.element_to_be_clickable(button))
+        self.rand_sleep(wait)
+        button.click()
+    
+    def weekDiff(self, date_first, date_last):
+        # If first comes after last, swap first and last, and multiply by -1
+        mult = 1
+        if date_first > date_last:
+            date_first, date_last = date_last, date_first
+            mult = -1
+        
+        day_diff = date_first.daysTo(date_last)
+        first_dow = date_first.dayOfWeek()
+        week_diff = int((day_diff + first_dow - 1)/7)
+        
+        return mult * week_diff
+    
+    ####### Specific helper functions #######
+    # Helper functions that have one specific usage, e.g. filling a specific
+    # field or reading the value of a specific element on the website
+
+    def fillRoute(self):
+        combobox_xpath = ['div/form/div/div[3]/div[1]/button',
+                          'div/form/div/div[3]/div[2]/button']
+        options_xpath = ['div/form/div/div[3]/div[1]/div/div/div/div/div/button',
+                         'div/form/div/div[3]/div[2]/div/div/div/div/div/button']
+        
+        for i in range(2):
+            combobox = self.getElement(combobox_xpath[i])
+            self.clickButton(combobox)
+            
+            self.rand_sleep(0.5)
+            
+            # Create a dictionary from options and click the option with matching text
+            options = self.getElements(options_xpath[i])
+            enum = enumerate(options)
+            d = dict((option.text, idx) for idx, option in enum)
+            self.clickButton(options[d[self.route[i]]])
+    
+    def fillTrailer(self):
+        if self.ui.comboBox_trailer.currentIndex() > 0:
+            button = self.getElement('div/form/div[3]/div/div[2]/div/div[2]/button')
+            checkbox = self.getElement('div/form/div[3]/div/div[2]/div/div[2]/button/input')
+            
+            # Change the status of the checkbox if it's not already correct
+            if not checkbox.get_property('checked'):
+                self.clickButton(button)
+            
+            # Select trailer
+            buttons = self.getElements(
+                'div/form/div[3]/div/div[2]/div/div[3]/div[2]/div/div/button', wait=1)
+            self.clickButton(
+                buttons[self.ui.comboBox_trailer.currentIndex()-1])
+    
+    def fillPassengers(self):
+        field = self.getElement(
+            'div/form/div[3]/div/div[2]/div/div[3]/div/div/div/input')
+        field.send_keys(Keys.BACKSPACE)
+        field.send_keys(self.n_passengers)
+    
+    def setupTimeWidgets(self):
+        self.time_widgets = []
+        self.rand_sleep(1)
+        
+        # Create a TimeWidget for each date
+        for i in range(self.n_dates):
+            date = self.first_date.addDays(i)
+            deps_available, deps_time = self.getAvailableDepartures(date)
+            self.time_widgets.append(TimeWidget(deps_time, deps_available))
+        
+        # Create a stackedwidget page for each date (after removing the existing stackedwidget)
+        self.ui.time_layout.removeWidget(self.ui.time_layout.itemAt(2).widget())
+        self.ui.stackedWidget_time = QStackedWidget()
+        self.ui.time_layout.insertWidget(2, self.ui.stackedWidget_time)
+        for w in self.time_widgets:
+            self.ui.stackedWidget_time.addWidget(w)
+            
+    def getAvailableDepartures(self, date):
+        self.goToDate(date)
+        self.wait_for_elem('div/form/div[3]/div')
+        date_buttons = self.getElements('div/form/div')[2:]
+        
+        deps_available = self.getAvailable(date_buttons)
+        deps_time = self.getDepTimes(date_buttons)
+        
+        return deps_available, deps_time
+    
+    def goToDate(self, date):
+        week_diff = self.weekDiff(self.getSelectedDate(), date)
+        button = None
+        
+        if week_diff > 0:
+            button = self.getElement('div/form/div[1]/div[3]/button')
+        elif week_diff < 0:
+            week_diff = -week_diff
+            button = self.getElement('div/form/div[1]/div[1]/button')
+        
+        # Go to correct week
+        for i in range(week_diff):
+            self.clickButton(button)
+        
+        # Go to correct day of week
+        dow = date.dayOfWeek()
+        button = self.getElement('div/form/div[1]/div[2]/div/div/button[' + 
+                                 str(dow) + ']')
+        self.clickButton(button)
+        
+    def getSelectedDate(self):
+        buttons = self.getElements('div/form/div[1]/div[2]/div/div/button')
+        dow = 1
+        for button in buttons:
+            if '-selected' in button.get_attribute('class'):
+                break
+            dow += 1
+        
+        date_string = buttons[dow-1].text.split('\n')
+        
+        if date_string[1] == 'I dag':
+            return QDate.currentDate()
+        
+        d = int(date_string[0])
+        m = self.months[date_string[1]]
+        y = QDate.currentDate().year()
+        
+        return QDate(y, m, d)
+    
+    def getDepTimes(self, deps):
+        deps_times = []
+        for dep in deps:
+            deps_times.append(dep.find_element(
+                By.XPATH, 'div/button/button/div[1]/div[1]/div[2]').text)
+        return deps_times
+    
+    def getAvailable(self, deps):
+        # Last piece of text is 'Udsolgt' if tickets are unavailable
+        return [dep.text.split()[-1] != 'Udsolgt' for dep in deps]
+    
+    def getMailAddress(self):
+        mail = self.ui.lineEdit_mail.text()
+
+        # Mail must contain one '@' between two strings
+        mail_split = mail.split('@')
+        if len(mail_split) != 2:
+            return
+        if not all(len(s) > 0 for s in mail_split):
+            return
+        
+        # Mail must contain one or more '.' after the '@'.
+        # There must be a string before and after each '.'
+        mail_split_split = mail_split[1].split('.')
+        if len(mail_split_split) < 2:
+            return
+        if not all(len(s) > 0 for s in mail_split_split):
+            return
+        
+        return mail
 
     def fixLastDate(self):
         if self.ui.dateEdit_first.date() > self.ui.dateEdit_last.date():
@@ -281,42 +423,6 @@ class KombardoPinger(QMainWindow):
 
         if idx == self.n_dates - 1:
             self.ui.pushButton_nextdate.setEnabled(False)
-
-    def notiPrev(self):
-        self.ui.stackedWidget.setCurrentIndex(1)
-
-    def notiSearch(self):
-        # Check validity of mail
-        mail = self.ui.lineEdit_mail.text()
-
-        mail_split = mail.split('@')
-        if len(mail_split) != 2:
-            return
-
-        mail_split_split = mail_split[1].split('.')
-        if len(mail_split_split) < 2:
-            return
-        if not all(len(s) > 0 for s in mail_split_split):
-            return
-
-        self.ui.stackedWidget.setCurrentIndex(3)
-        self.start_time = QTime.currentTime()
-        self.end_time =  self.start_time.addSecs(50)
-        self.startSearchLoop()
-    
-    def extendTime(self):
-        self.end_time = self.end_time.addSecs(20)
-        self.ui.pushButton_extend.setEnabled(False)
-        
-        # Update search-end time text
-        text = self.ui.label_endTime.text()
-        end_time = self.end_time.toString('hh:mm')
-        text = re.sub('..:..', end_time, text)
-        self.ui.label_endTime.setText(text)
-
-    def endSearch(self):
-        self.driver.close()
-        self.close()
         
     def startSearchLoop(self):
         # Display search-end time text
@@ -330,21 +436,76 @@ class KombardoPinger(QMainWindow):
         
         for i in range(self.n_dates):
             print(date)
-            print(self.timeWidgets[i].available)
+            print(self.time_widgets[i].available)
             date = date.addDays(1)
         
-        self.searchLoop()
+        QTimer.singleShot(self.search_freq, self.searchLoop)
 
     def searchLoop(self):
-        time_until_end = QTime.currentTime().secsTo(self.end_time)
-        if time_until_end > 0:
-            print(time_until_end)
-            if time_until_end < 20:
-                self.ui.pushButton_extend.setEnabled(True)
-            QTimer.singleShot(5000, self.searchLoop)
-        else:
+        time_until_end = QDateTime.currentDateTime().secsTo(self.end_time)
+        if time_until_end <= 0:
+            print('Time ran out, ending search.')
             self.endSearch()
-
+        else:
+            try:
+                if time_until_end < self.var['extend_search_hours'] * 3600:
+                    self.ui.pushButton_extend.setEnabled(True)
+                
+                # Scroll to first date
+                self.goToDate(self.first_date)
+                
+                print('New available:')
+                # Check availability for each date
+                has_any_new_available = False
+                for i in range(self.n_dates):
+                    has_this_new_available = False
+                    
+                    date = self.first_date.addDays(i)
+                    deps_available, deps_time = self.getAvailableDepartures(date)
+                
+                    is_available = deps_available
+                    was_available = self.time_widgets[i].available
+                    
+                    # Check if new departures have become available
+                    text = date.toString('dd/MM:')
+                    for j in range(len(deps_time)):
+                        if not was_available[j] and is_available[j]:
+                            has_any_new_available = True
+                            has_this_new_available = True
+                            text = text + '\n' + deps_time[j]
+                    
+                    if has_this_new_available:
+                        print(text)
+                        print()
+                        
+                    self.time_widgets[i].available = is_available
+                
+                if not has_any_new_available:
+                    print('None')
+                    print()
+    
+                QTimer.singleShot(self.search_freq, self.searchLoop)
+                
+            except ElementClickInterceptedException:  # Expected exception
+                # Restart search
+                self.driver.get('https://www.bornholmslinjen.dk/booking')
+                self.rand_sleep(1)
+                
+                self.fillFirstPage()
+                
+                # Go to second page and select today's date
+                button = self.getElement('div/form/div[3]/div/button')
+                self.clickButton(button)
+                now_dow = QDate.currentDate().dayOfWeek()
+                button = self.getElement('div/form/div/div[3]/div/div/button[' +
+                                         str(now_dow) + ']')
+                self.clickButton(button)
+                
+                # Continue the search
+                self.searchLoop()
+            
+            #except:  # Unexpected exception
+            #    self.endSearch()
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
