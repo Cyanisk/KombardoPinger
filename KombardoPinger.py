@@ -22,10 +22,12 @@ from TimeWidget import TimeWidget
 
 # TODO: Get moving back and forth through the app work
 # TODO: Perhaps change parameters along with the user?
+# TODO: Try to leave more room for user input while working?
 # TODO: Handle the case when there are no departures
 # TODO: Handle when a tracked departure is passed
 # TODO: Implement global timerange
-# TODO: Button to reset departure time range
+# TODO: (Perhaps start by respecting chosen timeranges)
+# TODO: Button to reset departure time range?
 # TODO: Ask user to wait while departure times load
 # TODO: Set up mailing stuff
 # TODO: Integers in variables.txt
@@ -136,13 +138,20 @@ class KombardoPinger(QMainWindow):
         
         delta = self.first_date.daysTo(self.last_date)
         self.n_dates = 1 + delta
-
+        
+        # Show waiting screen while program is working
+        self.loadPageWait()
+        self.ui.stackedWidget.setCurrentIndex(1)
+        QTimer.singleShot(10, self.whileWaiting)
+        
+    
+    def whileWaiting(self):
         # Fill in website form
         self.fillFirstPage()
-
+        
         # Load time page
         self.loadPageTime()
-        self.ui.stackedWidget.setCurrentIndex(1)
+        self.ui.stackedWidget.setCurrentIndex(2)
     
     def fillFirstPage(self):
         self.fillRoute()
@@ -152,6 +161,10 @@ class KombardoPinger(QMainWindow):
         # Next page
         button = self.getElement('div/form/div[3]/div/button')
         self.clickButton(button)
+    
+    def loadPageWait(self):
+        text = '0/' + str(self.n_dates)
+        self.ui.label_fetchProg.setText(text)
     
     def loadPageTime(self):
         self.ui.dateEdit_time.setDate(self.ui.dateEdit_first.date())
@@ -171,10 +184,10 @@ class KombardoPinger(QMainWindow):
         self.ui.stackedWidget.setCurrentIndex(0)
 
     def timeNext(self):
-        self.ui.stackedWidget.setCurrentIndex(2)
+        self.ui.stackedWidget.setCurrentIndex(3)
         
     def notiPrev(self):
-        self.ui.stackedWidget.setCurrentIndex(1)
+        self.ui.stackedWidget.setCurrentIndex(2)
 
     def notiSearch(self):
         
@@ -185,7 +198,7 @@ class KombardoPinger(QMainWindow):
         self.noti_email = mail
         self.search_freq = self.ui.spinBox_minutes.value() * 60000
 
-        self.ui.stackedWidget.setCurrentIndex(3)
+        self.ui.stackedWidget.setCurrentIndex(4)
         self.start_time = QDateTime.currentDateTime()
         self.end_time =  self.start_time.addSecs(self.var['init_search_hours'] * 3600)
         self.startSearchLoop()
@@ -316,6 +329,11 @@ class KombardoPinger(QMainWindow):
         
         # Create a TimeWidget for each date
         for i in range(self.n_dates):
+            # Update counter on waiting page
+            text = str(i+1) + '/' + str(self.n_dates)
+            self.ui.label_fetchProg.setText(text)
+            self.ui.label_fetchProg.repaint()
+            
             date = self.first_date.addDays(i)
             deps_available, deps_time = self.getAvailableDepartures(date)
             self.time_widgets.append(TimeWidget(deps_time, deps_available))
