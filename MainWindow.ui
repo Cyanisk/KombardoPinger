@@ -760,7 +760,11 @@
              </widget>
             </item>
             <item>
-             <widget class="QLineEdit" name="lineEdit_mail"/>
+             <widget class="QLineEdit" name="lineEdit_mail">
+              <property name="text">
+               <string>m@m.m</string>
+              </property>
+             </widget>
             </item>
            </layout>
           </item>
@@ -1006,6 +1010,23 @@
              </size>
             </property>
            </spacer>
+          </item>
+          <item>
+           <layout class="QHBoxLayout" name="horizontalLayout_12">
+            <item>
+             <widget class="QPushButton" name="pushButton_restart">
+              <property name="maximumSize">
+               <size>
+                <width>200</width>
+                <height>16777215</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>Genstart søgning</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
          </layout>
         </item>

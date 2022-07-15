@@ -1,5 +1,5 @@
 import sys
-import os
+import traceback
 import random
 import re
 from datetime import date
@@ -32,6 +32,9 @@ from TimeWidget import TimeWidget
 # TODO: Use timeout in getElements
 # TODO: Maybe put more variables in the GUI?
 # TODO: Rename functions
+# TODO: Function handling exceptions
+# TODO: Remove button on GUI for restarting search
+# TODO: Hide browser
 
 class KombardoPinger(QMainWindow):
     
@@ -59,6 +62,9 @@ class KombardoPinger(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.setWindowTitle("Kombardo Pinger")
+        
+        # Number of exceptions since last succesful search iteration
+        self.exception_streak = 0
 
         # Read variables
         self.var = {}
@@ -97,6 +103,7 @@ class KombardoPinger(QMainWindow):
 
         # Events (searchpage)
         self.ui.pushButton_extend.clicked.connect(self.extendTime)
+        self.ui.pushButton_restart.clicked.connect(self.searchLoop)
         self.ui.pushButton_end.clicked.connect(self.endSearch)
         
     ####### Main flow functions #######
@@ -138,11 +145,9 @@ class KombardoPinger(QMainWindow):
         self.ui.stackedWidget.setCurrentIndex(1)
     
     def fillFirstPage(self):
-        # Filling trailer can generate additional elements, therefore it's
-        # easiest if trailer is filled last
         self.fillRoute()
-        self.fillPassengers()
         self.fillTrailer()
+        self.fillPassengers()
 
         # Next page
         button = self.getElement('div/form/div[3]/div/button')
@@ -292,8 +297,16 @@ class KombardoPinger(QMainWindow):
                 buttons[self.ui.comboBox_trailer.currentIndex()-1])
     
     def fillPassengers(self):
-        field = self.getElement(
-            'div/form/div[3]/div/div[2]/div/div[3]/div/div/div/input')
+        # If trailer-checkbox is checked, the input field is in div[4] instead of div[3]
+        checkbox = self.getElement('div/form/div[3]/div/div[2]/div/div[2]/button/input')
+        field = None
+        if checkbox.get_property('checked'):
+            field = self.getElement(
+                'div/form/div[3]/div/div[2]/div/div[4]/div/div/div/input')
+        else:
+            field = self.getElement(
+                'div/form/div[3]/div/div[2]/div/div[3]/div/div/div/input')
+            
         field.send_keys(Keys.BACKSPACE)
         field.send_keys(self.n_passengers)
     
@@ -316,6 +329,7 @@ class KombardoPinger(QMainWindow):
             
     def getAvailableDepartures(self, date):
         self.goToDate(date)
+        self.rand_sleep(0.5)
         self.wait_for_elem('div/form/div[3]/div')
         date_buttons = self.getElements('div/form/div')[2:]
         
@@ -452,7 +466,7 @@ class KombardoPinger(QMainWindow):
                     self.ui.pushButton_extend.setEnabled(True)
                 
                 # Scroll to first date
-                self.goToDate(self.first_date)
+                #self.goToDate(self.first_date)
                 
                 print('New available:')
                 # Check availability for each date
@@ -483,23 +497,33 @@ class KombardoPinger(QMainWindow):
                 if not has_any_new_available:
                     print('None')
                     print()
-    
+                
+                self.exception_streak = 0
+                
                 QTimer.singleShot(self.search_freq, self.searchLoop)
                 
-            except ElementClickInterceptedException:  # Expected exception
+            except Exception as e:
+                #traceback.print_tb(e.__traceback__)
+                #print('Got exception: ' + str(e))
+                self.exception_streak += 1
+                
+                if self.exception_streak > 3:
+                    print('Too many exceptions without success. Ending search')
+                    #self.endSearch()
+                    return
+                    
                 # Restart search
                 self.driver.get('https://www.bornholmslinjen.dk/booking')
                 self.rand_sleep(1)
                 
                 self.fillFirstPage()
                 
-                # Go to second page and select today's date
-                button = self.getElement('div/form/div[3]/div/button')
-                self.clickButton(button)
+                # select today's date
                 now_dow = QDate.currentDate().dayOfWeek()
                 button = self.getElement('div/form/div/div[3]/div/div/button[' +
                                          str(now_dow) + ']')
                 self.clickButton(button)
+                self.rand_sleep(2)
                 
                 # Continue the search
                 self.searchLoop()
