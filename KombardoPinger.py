@@ -29,7 +29,7 @@ from TimeWidget import TimeWidget
 # TODO: (Perhaps start by respecting chosen timeranges)
 # TODO: Button to reset departure time range?
 # TODO: Ask user to wait while departure times load
-# TODO: Set up mailing stuff
+# TODO: Send a mail containing deparrtures initially available
 # TODO: Integers in variables.txt
 # TODO: Use timeout in getElements
 # TODO: Maybe put more variables in the GUI?
@@ -455,6 +455,9 @@ class KombardoPinger(QMainWindow):
 
         if idx == self.n_dates - 1:
             self.ui.pushButton_nextdate.setEnabled(False)
+            
+    ####### Search loop functions #######
+    # Functions used specifically for the search loop
         
     def startSearchLoop(self):
         # Display search-end time text
@@ -476,17 +479,18 @@ class KombardoPinger(QMainWindow):
     def searchLoop(self):
         time_until_end = QDateTime.currentDateTime().secsTo(self.end_time)
         if time_until_end <= 0:
-            print('Time ran out, ending search.')
+            subject = 'Søgning er afsluttet fordi tiden er løbet ud'
+            text = 'Fordi søgetiden er ikke blevet forlænget, er tiden løbet ud, og programmet er blevet stoppet'
+            self.sendNotification(subject, text)
             self.endSearch()
         else:
             try:
                 if time_until_end < self.var['extend_search_hours'] * 3600:
                     self.ui.pushButton_extend.setEnabled(True)
                 
-                # Scroll to first date
-                #self.goToDate(self.first_date)
+                # Result string which will be sent to receiver email
+                result = 'New available:'
                 
-                print('New available:')
                 # Check availability for each date
                 has_any_new_available = False
                 for i in range(self.n_dates):
@@ -499,36 +503,34 @@ class KombardoPinger(QMainWindow):
                     was_available = self.time_widgets[i].available
                     
                     # Check if new departures have become available
-                    text = date.toString('dd/MM:')
+                    text = '\n' + date.toString('dd/MM:')
                     for j in range(len(deps_time)):
                         if not was_available[j] and is_available[j]:
                             has_any_new_available = True
                             has_this_new_available = True
-                            text = text + '\n' + deps_time[j]
+                            text += '\n' + deps_time[j]
                     
                     if has_this_new_available:
-                        print(text)
-                        print()
+                        result += text + '\n'
                         
                     self.time_widgets[i].available = is_available
                 
-                if not has_any_new_available:
-                    print('None')
-                    print()
+                if has_any_new_available:
+                    subject = 'Nye ledige billeter'
+                    self.sendNotification(subject, result)
                 
                 self.exception_streak = 0
                 
                 QTimer.singleShot(self.search_freq, self.searchLoop)
                 
-            except Exception as e:
-                #traceback.print_tb(e.__traceback__)
-                #print('Got exception: ' + str(e))
+            except Exception:
                 self.exception_streak += 1
                 
                 if self.exception_streak > 3:
-                    print('Too many exceptions without success. Ending search')
-                    #self.endSearch()
-                    return
+                    subject = 'Søgning er afsluttet pga. fejl'
+                    text = 'Programmet har obhobet for mange fejl og er derfor blevet stoppet'
+                    self.sendNotification(subject, text)
+                    self.endSearch()
                     
                 # Restart search
                 self.driver.get('https://www.bornholmslinjen.dk/booking')
@@ -545,9 +547,15 @@ class KombardoPinger(QMainWindow):
                 
                 # Continue the search
                 self.searchLoop()
-            
-            #except:  # Unexpected exception
-            #    self.endSearch()
+    
+    def sendNotification(self, subject, text):
+        message = 'Subject: ' + subject + '\n\n' + text
+
+        context = ssl.create_default_context()
+        with smtplib.SMTP_SSL(self.var['smtp_server'],
+                              self.var['port'], context=context) as server:
+            server.login(self.var['sender'], self.var['password'])
+            server.sendmail(self.var['sender'], self.noti_email, message)
 
 if __name__ == '__main__':
     app = QApplication(sys.argv)
