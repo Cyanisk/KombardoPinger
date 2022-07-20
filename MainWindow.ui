@@ -45,7 +45,7 @@
     <item row="0" column="0">
      <widget class="QStackedWidget" name="stackedWidget">
       <property name="currentIndex">
-       <number>0</number>
+       <number>4</number>
       </property>
       <widget class="QWidget" name="page_date">
        <layout class="QVBoxLayout" name="verticalLayout_2" stretch="0,1,0">
@@ -847,7 +847,7 @@
             <item>
              <widget class="QLineEdit" name="lineEdit_mail">
               <property name="text">
-               <string>m@m.m</string>
+               <string/>
               </property>
              </widget>
             </item>
@@ -1095,23 +1095,6 @@
              </size>
             </property>
            </spacer>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_12">
-            <item>
-             <widget class="QPushButton" name="pushButton_restart">
-              <property name="maximumSize">
-               <size>
-                <width>200</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="text">
-               <string>Genstart søgning</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
           </item>
          </layout>
         </item>

@@ -28,7 +28,6 @@ from TimeWidget import TimeWidget
 # TODO: Implement global timerange
 # TODO: (Perhaps start by respecting chosen timeranges)
 # TODO: Button to reset departure time range?
-# TODO: Ask user to wait while departure times load
 # TODO: Send a mail containing deparrtures initially available
 # TODO: Integers in variables.txt
 # TODO: Use timeout in getElements
@@ -37,6 +36,7 @@ from TimeWidget import TimeWidget
 # TODO: Function handling exceptions
 # TODO: Remove button on GUI for restarting search
 # TODO: Hide browser
+# TODO: Handle more exceptions
 
 class KombardoPinger(QMainWindow):
     
@@ -105,7 +105,6 @@ class KombardoPinger(QMainWindow):
 
         # Events (searchpage)
         self.ui.pushButton_extend.clicked.connect(self.extendTime)
-        self.ui.pushButton_restart.clicked.connect(self.searchLoop)
         self.ui.pushButton_end.clicked.connect(self.endSearch)
         
     ####### Main flow functions #######
@@ -479,7 +478,7 @@ class KombardoPinger(QMainWindow):
     def searchLoop(self):
         time_until_end = QDateTime.currentDateTime().secsTo(self.end_time)
         if time_until_end <= 0:
-            subject = 'Søgning er afsluttet fordi tiden er løbet ud'
+            subject = 'Soegning er afsluttet fordi tiden er loebet ud'
             text = 'Fordi søgetiden er ikke blevet forlænget, er tiden løbet ud, og programmet er blevet stoppet'
             self.sendNotification(subject, text)
             self.endSearch()
@@ -527,7 +526,7 @@ class KombardoPinger(QMainWindow):
                 self.exception_streak += 1
                 
                 if self.exception_streak > 3:
-                    subject = 'Søgning er afsluttet pga. fejl'
+                    subject = 'Soegning er afsluttet pga. fejl'
                     text = 'Programmet har obhobet for mange fejl og er derfor blevet stoppet'
                     self.sendNotification(subject, text)
                     self.endSearch()
