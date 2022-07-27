@@ -457,7 +457,7 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
-        self.stackedWidget.setCurrentIndex(4)
+        self.stackedWidget.setCurrentIndex(0)
         self.stackedWidget_time.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 

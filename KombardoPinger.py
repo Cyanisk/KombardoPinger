@@ -304,7 +304,7 @@ class KombardoPinger(QMainWindow):
             
             # Select trailer
             buttons = self.getElements(
-                'div/form/div[3]/div/div[2]/div/div[3]/div[2]/div/div/button', wait=1)
+                'div/form/div[3]/div/div[2]/div/div[3]/div[2]/div/div/button', wait=2)
             self.clickButton(
                 buttons[self.ui.comboBox_trailer.currentIndex()-1])
     
