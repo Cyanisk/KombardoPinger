@@ -36,7 +36,11 @@ from TimeWidget import TimeWidget
 # TODO: Function handling exceptions
 # TODO: Remove button on GUI for restarting search
 # TODO: Hide browser
+# TODO: Handle when geckodriver wants to update (program crashes)
 # TODO: Handle more exceptions
+# TODO: I notice that if a date is selected before the departures of currently 
+#       selected date have loaded, then the departures of currently selected
+#       date will show instead of the departures of the selected date
 
 class KombardoPinger(QMainWindow):
     
@@ -175,6 +179,7 @@ class KombardoPinger(QMainWindow):
         button = self.getElement('div/form/div/div[3]/div/div/button[' +
                                  str(now_dow) + ']')
         self.clickButton(button)
+        self.wait_for_elem('div/form/div[3]/div')
 
         # Create a TimeWidget for each departure date
         self.setupTimeWidgets()      
@@ -183,6 +188,15 @@ class KombardoPinger(QMainWindow):
         self.ui.stackedWidget.setCurrentIndex(0)
 
     def timeNext(self):
+        # Store the desired range of departure times
+        for w in self.time_widgets:
+            desired = [False]*len(w.dep_times)
+            idx_first = w.comboBox_timefirst.currentIndex()
+            idx_last = w.comboBox_timelast.currentIndex()
+            for i in range(idx_first, idx_last+1):
+                desired[i] = True
+            w.desired = desired
+            
         self.ui.stackedWidget.setCurrentIndex(3)
         
     def notiPrev(self):
@@ -335,7 +349,7 @@ class KombardoPinger(QMainWindow):
             
             date = self.first_date.addDays(i)
             deps_available, deps_time = self.getAvailableDepartures(date)
-            self.time_widgets.append(TimeWidget(deps_time, deps_available))
+            self.time_widgets.append(TimeWidget(date, deps_time, deps_available))
         
         # Create a stackedwidget page for each date (after removing the existing stackedwidget)
         self.ui.time_layout.removeWidget(self.ui.time_layout.itemAt(2).widget())
@@ -346,7 +360,7 @@ class KombardoPinger(QMainWindow):
             
     def getAvailableDepartures(self, date):
         self.goToDate(date)
-        self.rand_sleep(0.5)
+        #self.rand_sleep(0.5)
         self.wait_for_elem('div/form/div[3]/div')
         date_buttons = self.getElements('div/form/div')[2:]
         
@@ -492,9 +506,9 @@ class KombardoPinger(QMainWindow):
                 
                 # Check availability for each date
                 has_any_new_available = False
+                
+                """
                 for i in range(self.n_dates):
-                    has_this_new_available = False
-                    
                     date = self.first_date.addDays(i)
                     deps_available, deps_time = self.getAvailableDepartures(date)
                 
@@ -508,11 +522,18 @@ class KombardoPinger(QMainWindow):
                             has_any_new_available = True
                             has_this_new_available = True
                             text += '\n' + deps_time[j]
+                """
+                
+                for w in self.time_widgets:
+                    date_string = '\n' + w.date.toString('dd/MM:')
+                    dep_string, is_available = \
+                        self.getNewAvailableString(w)
                     
-                    if has_this_new_available:
-                        result += text + '\n'
+                    if dep_string != '':
+                        has_any_new_available = True
+                        result += date_string + dep_string + '\n'
                         
-                    self.time_widgets[i].available = is_available
+                    w.available = is_available
                 
                 if has_any_new_available:
                     subject = 'Nye ledige billeter'
@@ -523,9 +544,10 @@ class KombardoPinger(QMainWindow):
                 QTimer.singleShot(self.search_freq, self.searchLoop)
                 
             except Exception:
+                traceback.print_exc()
                 self.exception_streak += 1
                 
-                if self.exception_streak > 3:
+                if self.exception_streak > 5:
                     subject = 'Soegning er afsluttet pga. fejl'
                     text = 'Programmet har obhobet for mange fejl og er derfor blevet stoppet'
                     self.sendNotification(subject, text)
@@ -542,10 +564,41 @@ class KombardoPinger(QMainWindow):
                 button = self.getElement('div/form/div/div[3]/div/div/button[' +
                                          str(now_dow) + ']')
                 self.clickButton(button)
-                self.rand_sleep(2)
+                #self.rand_sleep(2)
+                self.wait_for_elem('div/form/div[3]/div')
                 
                 # Continue the search
                 self.searchLoop()
+    
+    def getNewAvailableString(self, time_widget):
+        date = time_widget.date
+        deps_available, deps_time = self.getAvailableDepartures(date)
+    
+        is_available = deps_available
+        was_available = time_widget.available
+        
+        # Check if new departures have become available
+        temp1 = 0
+        temp2 = 0
+        text = ''
+        for i in range(len(deps_time)):
+            if not was_available[i] and is_available[i]:
+                temp1 += 1
+                if time_widget.desired[i]:
+                    temp2 += 1
+                    text += '\n' + deps_time[i]
+        
+        """
+        for i in range(len(deps_time)):
+            if time_widget.desired[i]:
+                if not was_available[i] and is_available[i]:
+                    text += '\n' + deps_time[i]
+        """
+        
+        if temp1 > 0:
+            print('Found ' + str(temp1) + ' new, kept ' + str(temp2) + '.')
+        
+        return text, is_available
     
     def sendNotification(self, subject, text):
         message = 'Subject: ' + subject + '\n\n' + text
