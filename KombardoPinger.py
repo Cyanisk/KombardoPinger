@@ -25,22 +25,20 @@ from TimeWidget import TimeWidget
 # TODO: Try to leave more room for user input while working?
 # TODO: Handle the case when there are no departures
 # TODO: Handle when a tracked departure is passed
-# TODO: Implement global timerange
-# TODO: (Perhaps start by respecting chosen timeranges)
 # TODO: Button to reset departure time range?
-# TODO: Send a mail containing deparrtures initially available
+# TODO: Send a mail containing departures initially available
 # TODO: Integers in variables.txt
 # TODO: Use timeout in getElements
 # TODO: Maybe put more variables in the GUI?
 # TODO: Rename functions
-# TODO: Function handling exceptions
-# TODO: Remove button on GUI for restarting search
+# TODO: A function handling exceptions
 # TODO: Hide browser
 # TODO: Handle when geckodriver wants to update (program crashes)
 # TODO: Handle more exceptions
 # TODO: I notice that if a date is selected before the departures of currently 
 #       selected date have loaded, then the departures of currently selected
 #       date will show instead of the departures of the selected date
+# TODO: Update list of attributes (or just delete it)
 
 class KombardoPinger(QMainWindow):
     
@@ -102,6 +100,8 @@ class KombardoPinger(QMainWindow):
         self.ui.pushButton_nextdate.clicked.connect(self.nextDate)
         self.ui.pushButton_prevdate.clicked.connect(self.prevDate)
         self.ui.dateEdit_time.dateChanged.connect(self.changeTimeWidget)
+        self.ui.timeEdit_globalFirst.timeChanged.connect(self.fixIndividualFirstTimes)
+        self.ui.timeEdit_globalLast.timeChanged.connect(self.fixIndividualLastTimes)
 
         # Events (notipage)
         self.ui.pushButton_notiprev.clicked.connect(self.notiPrev)
@@ -446,6 +446,22 @@ class KombardoPinger(QMainWindow):
     def fixFirstDate(self):
         if self.ui.dateEdit_first.date() > self.ui.dateEdit_last.date():
             self.ui.dateEdit_first.setDate(self.ui.dateEdit_last.date())
+    
+    def fixIndividualFirstTimes(self):
+        first_time = self.ui.timeEdit_globalFirst.time().toString('hh:mm')
+        for w in self.time_widgets:
+            for i in range(w.comboBox_timefirst.count()):
+                if w.comboBox_timefirst.itemText(i) >= first_time:
+                    w.comboBox_timefirst.setCurrentIndex(i)
+                    break
+    
+    def fixIndividualLastTimes(self):
+        last_time = self.ui.timeEdit_globalLast.time().toString('hh:mm')
+        for w in self.time_widgets:
+            for i in range(w.comboBox_timelast.count()):
+                if w.comboBox_timelast.itemText(i) > last_time:
+                    w.comboBox_timelast.setCurrentIndex(i-1)
+                    break
 
     def nextDate(self):
         self.ui.dateEdit_time.setDate(

@@ -688,7 +688,7 @@
                    </widget>
                   </item>
                   <item>
-                   <widget class="QTimeEdit" name="timeEdit"/>
+                   <widget class="QTimeEdit" name="timeEdit_globalFirst"/>
                   </item>
                   <item>
                    <widget class="QLabel" name="label_17">
@@ -698,7 +698,7 @@
                    </widget>
                   </item>
                   <item>
-                   <widget class="QTimeEdit" name="timeEdit_2">
+                   <widget class="QTimeEdit" name="timeEdit_globalLast">
                     <property name="dateTime">
                      <datetime>
                       <hour>23</hour>
