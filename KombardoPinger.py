@@ -193,7 +193,9 @@ class KombardoPinger(QMainWindow):
         button = self.getElement('div/form/div/div[3]/div/div/button[' +
                                  str(now_dow) + ']')
         self.clickButton(button)
-        self.wait_for_elem('div/form/div[3]/div')
+        
+        self.wait_while_loading()
+        #self.wait_for_elem('div/form/div[3]/div')
 
         # Create a TimeWidget for each departure date
         self.setupTimeWidgets()      
@@ -251,24 +253,13 @@ class KombardoPinger(QMainWindow):
         noise = random.random()*2 - 1
         time.sleep(sec + sec*u*noise)
     
-    def wait_while_loading(self, timeout=-1, wait=0):
+    def wait_while_loading(self, timeout=-1):
         if timeout < 0:
             timeout = self.var['timeout_secs']
+            
+        self.rand_sleep(0.2)
+        WebDriverWait(self.driver, timeout).until(loading_is_done((By.XPATH, '//div[@class="ml-loading-icon"]')))
         
-        """
-        for i in range(100):
-            try:
-                print(self.driver.find_element(By.XPATH, '//svg[@class="ml-loading-icon"]'))
-                time.sleep(0.01)
-            except NoSuchElementException:
-                print('gone')
-        """
-        WebDriverWait(self.driver, timeout).until(
-            loading_is_done(
-                (By.XPATH, '//svg[@class="ml-loading-icon"]')))
-        self.rand_sleep(wait)
-        
-
     def wait_for_elem(self, xpath, timeout=-1, wait=0):
         if timeout < 0:
             timeout = self.var['timeout_secs']
@@ -423,8 +414,7 @@ class KombardoPinger(QMainWindow):
         self.clickButton(button)
         
         # Wait for departures to load
-        self.rand_sleep(0.1)
-        WebDriverWait(self.driver,60).until(loading_is_done((By.XPATH, '//div[@class="ml-loading-icon"]')))
+        self.wait_while_loading()
         
         
     def getSelectedDate(self):
@@ -619,7 +609,8 @@ class KombardoPinger(QMainWindow):
                                          str(now_dow) + ']')
                 self.clickButton(button)
                 #self.rand_sleep(2)
-                self.wait_for_elem('div/form/div[3]/div')
+                self.wait_while_loading()
+                #self.wait_for_elem('div/form/div[3]/div')
                 
                 # Continue the search
                 self.searchLoop()
