@@ -13,7 +13,7 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import ElementClickInterceptedException
+from selenium.common.exceptions import ElementClickInterceptedException, NoSuchElementException
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from PyQt5.QtCore import QTimer, QTime, QDate, QDateTime
@@ -39,6 +39,20 @@ from TimeWidget import TimeWidget
 #       selected date have loaded, then the departures of currently selected
 #       date will show instead of the departures of the selected date
 # TODO: Update list of attributes (or just delete it)
+
+def loading_is_done(locator):
+    """ Custom ExpectedCondition for determining whether the element is no
+    longer present"""
+    
+    def _predicate(driver):
+        try:
+            driver.find_element(*locator)
+        except NoSuchElementException:
+            return driver.find_element(By.XPATH, '//*[@id="booking"]')
+        else:
+            raise NoSuchElementException
+    
+    return _predicate
 
 class KombardoPinger(QMainWindow):
     
@@ -124,7 +138,7 @@ class KombardoPinger(QMainWindow):
         # Open website
         self.driver = webdriver.Firefox()
         self.driver.get('https://www.bornholmslinjen.dk/booking')
-
+        
         # Decline unnecessary cookies
         WebDriverWait(self.driver, 10).until(
             EC.element_to_be_clickable((By.ID, 'declineButton')))
@@ -236,6 +250,24 @@ class KombardoPinger(QMainWindow):
     def rand_sleep(self, sec, u=0.2):
         noise = random.random()*2 - 1
         time.sleep(sec + sec*u*noise)
+    
+    def wait_while_loading(self, timeout=-1, wait=0):
+        if timeout < 0:
+            timeout = self.var['timeout_secs']
+        
+        """
+        for i in range(100):
+            try:
+                print(self.driver.find_element(By.XPATH, '//svg[@class="ml-loading-icon"]'))
+                time.sleep(0.01)
+            except NoSuchElementException:
+                print('gone')
+        """
+        WebDriverWait(self.driver, timeout).until(
+            loading_is_done(
+                (By.XPATH, '//svg[@class="ml-loading-icon"]')))
+        self.rand_sleep(wait)
+        
 
     def wait_for_elem(self, xpath, timeout=-1, wait=0):
         if timeout < 0:
@@ -361,7 +393,8 @@ class KombardoPinger(QMainWindow):
     def getAvailableDepartures(self, date):
         self.goToDate(date)
         #self.rand_sleep(0.5)
-        self.wait_for_elem('div/form/div[3]/div')
+        #self.wait_while_loading(wait=0.5)
+        #self.wait_for_elem('div/form/div[3]/div')
         date_buttons = self.getElements('div/form/div')[2:]
         
         deps_available = self.getAvailable(date_buttons)
@@ -383,11 +416,16 @@ class KombardoPinger(QMainWindow):
         for i in range(week_diff):
             self.clickButton(button)
         
-        # Go to correct day of week
+        # Go to correct date
         dow = date.dayOfWeek()
         button = self.getElement('div/form/div[1]/div[2]/div/div/button[' + 
                                  str(dow) + ']')
         self.clickButton(button)
+        
+        # Wait for departures to load
+        self.rand_sleep(0.1)
+        WebDriverWait(self.driver,60).until(loading_is_done((By.XPATH, '//div[@class="ml-loading-icon"]')))
+        
         
     def getSelectedDate(self):
         buttons = self.getElements('div/form/div[1]/div[2]/div/div/button')
