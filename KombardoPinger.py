@@ -23,8 +23,6 @@ from TimeWidget import TimeWidget
 # TODO: Get moving back and forth through the app work
 # TODO: Perhaps change parameters along with the user?
 # TODO: Try to leave more room for user input while working?
-# TODO: Handle the case when there are no departures
-# TODO: Handle when a tracked departure is passed
 # TODO: Button to reset departure time range?
 # TODO: Send a mail containing departures initially available
 # TODO: Integers in variables.txt
@@ -184,10 +182,6 @@ class KombardoPinger(QMainWindow):
         self.ui.label_fetchProg.setText(text)
     
     def loadPageTime(self):
-        self.ui.dateEdit_time.setDate(self.ui.dateEdit_first.date())
-        self.ui.dateEdit_time.setMinimumDate(self.ui.dateEdit_first.date())
-        self.ui.dateEdit_time.setMaximumDate(self.ui.dateEdit_last.date())
-
         # Switch to weekly view instead of biweekly
         now_dow = QDate.currentDate().dayOfWeek()
         button = self.getElement('div/form/div/div[3]/div/div/button[' +
@@ -195,10 +189,19 @@ class KombardoPinger(QMainWindow):
         self.clickButton(button)
         
         self.wait_while_loading()
-        #self.wait_for_elem('div/form/div[3]/div')
 
         # Create a TimeWidget for each departure date
-        self.setupTimeWidgets()      
+        self.setupTimeWidgets()
+        
+        # Set up date-chooser according to the created TimeWidgets
+        self.first_date = self.time_widgets[0].date
+        self.last_date = self.time_widgets[-1].date
+        delta = self.first_date.daysTo(self.last_date)
+        self.n_dates = 1 + delta
+        
+        self.ui.dateEdit_time.setDate(self.first_date)
+        self.ui.dateEdit_time.setMinimumDate(self.first_date)
+        self.ui.dateEdit_time.setMaximumDate(self.last_date)
     
     def timePrev(self):
         self.ui.stackedWidget.setCurrentIndex(0)
@@ -372,7 +375,8 @@ class KombardoPinger(QMainWindow):
             
             date = self.first_date.addDays(i)
             deps_available, deps_time = self.getAvailableDepartures(date)
-            self.time_widgets.append(TimeWidget(date, deps_time, deps_available))
+            if len(deps_time) > 0:
+                self.time_widgets.append(TimeWidget(date, deps_time, deps_available))
         
         # Create a stackedwidget page for each date (after removing the existing stackedwidget)
         self.ui.time_layout.removeWidget(self.ui.time_layout.itemAt(2).widget())
@@ -381,12 +385,19 @@ class KombardoPinger(QMainWindow):
         for w in self.time_widgets:
             self.ui.stackedWidget_time.addWidget(w)
             
-    def getAvailableDepartures(self, date):
+    def getAvailableDepartures(self, date, second_attempt=False):
         self.goToDate(date)
-        #self.rand_sleep(0.5)
-        #self.wait_while_loading(wait=0.5)
-        #self.wait_for_elem('div/form/div[3]/div')
         date_buttons = self.getElements('div/form/div')[2:]
+        
+        # Check if returned list contains departures or just the "no departures" element
+        if len(date_buttons) == 1:
+            if date_buttons[0].get_attribute('class') == 'departure-and-ticket__code':
+                # Try one more time to make sure that we aren't getting trolled
+                if second_attempt:
+                    return [], []
+                else:
+                    print('Lemme try again')
+                    return self.getAvailableDepartures(date, True)
         
         deps_available = self.getAvailable(date_buttons)
         deps_time = self.getDepTimes(date_buttons)
@@ -537,7 +548,7 @@ class KombardoPinger(QMainWindow):
         time_until_end = QDateTime.currentDateTime().secsTo(self.end_time)
         if time_until_end <= 0:
             subject = 'Soegning er afsluttet fordi tiden er loebet ud'
-            text = 'Fordi søgetiden er ikke blevet forlænget, er tiden løbet ud, og programmet er blevet stoppet'
+            text = 'Fordi soegetiden er ikke blevet forlaenget, er tiden loebet ud, og programmet er blevet stoppet'
             self.sendNotification(subject, text)
             self.endSearch()
         else:
@@ -551,23 +562,6 @@ class KombardoPinger(QMainWindow):
                 # Check availability for each date
                 has_any_new_available = False
                 
-                """
-                for i in range(self.n_dates):
-                    date = self.first_date.addDays(i)
-                    deps_available, deps_time = self.getAvailableDepartures(date)
-                
-                    is_available = deps_available
-                    was_available = self.time_widgets[i].available
-                    
-                    # Check if new departures have become available
-                    text = '\n' + date.toString('dd/MM:')
-                    for j in range(len(deps_time)):
-                        if not was_available[j] and is_available[j]:
-                            has_any_new_available = True
-                            has_this_new_available = True
-                            text += '\n' + deps_time[j]
-                """
-                
                 for w in self.time_widgets:
                     date_string = '\n' + w.date.toString('dd/MM:')
                     dep_string, is_available = \
@@ -576,8 +570,31 @@ class KombardoPinger(QMainWindow):
                     if dep_string != '':
                         has_any_new_available = True
                         result += date_string + dep_string + '\n'
+                    
+                    # If all departures on the first date are passed, remove that date
+                    if (len(is_available) == 0) & (w.date == self.first_date):
+                        self.first_date = self.first_date.addDays(1)
+                        self.time_widgets = self.time_widgets[1:]
+                        print('Removed the date ' + w.date.toString('dd/MM:'))
                         
+                        if self.first_date > self.last_date:
+                            subject = 'Soegning er afsluttet fordi alle relevante afgange er passeret'
+                            text = 'Alle valgte afgange er passeret, så soegningen er stoppet'
+                            self.sendNotification(subject, text)
+                            self.endSearch()
+                        
+                    # Remove passed departures and update availability
+                    elif len(w.available) > len(is_available):
+                        print('changed ' + w.date.toString('dd/MM:') + ' from')
+                        print(w.dep_times)
+                        print(w.available)
+                        len_diff = len(w.available) - len(is_available)
+                        w.dep_times = w.dep_times[len_diff:]
+                        print('to')
+                        print(w.dep_times)
+                        print(is_available)
                     w.available = is_available
+                        
                 
                 if has_any_new_available:
                     subject = 'Nye ledige billeter'
@@ -608,9 +625,7 @@ class KombardoPinger(QMainWindow):
                 button = self.getElement('div/form/div/div[3]/div/div/button[' +
                                          str(now_dow) + ']')
                 self.clickButton(button)
-                #self.rand_sleep(2)
                 self.wait_while_loading()
-                #self.wait_for_elem('div/form/div[3]/div')
                 
                 # Continue the search
                 self.searchLoop()
@@ -618,30 +633,18 @@ class KombardoPinger(QMainWindow):
     def getNewAvailableString(self, time_widget):
         date = time_widget.date
         deps_available, deps_time = self.getAvailableDepartures(date)
-    
+        
+        # Trim the previous list of available (in case departures have passed)
+        n_deps = len(deps_available)
         is_available = deps_available
-        was_available = time_widget.available
+        was_available = time_widget.available[-n_deps:]
         
         # Check if new departures have become available
-        temp1 = 0
-        temp2 = 0
         text = ''
         for i in range(len(deps_time)):
             if not was_available[i] and is_available[i]:
-                temp1 += 1
                 if time_widget.desired[i]:
-                    temp2 += 1
                     text += '\n' + deps_time[i]
-        
-        """
-        for i in range(len(deps_time)):
-            if time_widget.desired[i]:
-                if not was_available[i] and is_available[i]:
-                    text += '\n' + deps_time[i]
-        """
-        
-        if temp1 > 0:
-            print('Found ' + str(temp1) + ' new, kept ' + str(temp2) + '.')
         
         return text, is_available
     
