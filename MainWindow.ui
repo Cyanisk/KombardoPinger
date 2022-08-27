@@ -751,10 +751,7 @@
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_13">
           <item>
-           <widget class="QPushButton" name="pushButton_timeprev">
-            <property name="enabled">
-             <bool>true</bool>
-            </property>
+           <widget class="QPushButton" name="pushButton_resettimerange">
             <property name="maximumSize">
              <size>
               <width>150</width>
@@ -762,7 +759,7 @@
              </size>
             </property>
             <property name="text">
-             <string>Tilbage</string>
+             <string>Nulstil tidsinterval</string>
             </property>
            </widget>
           </item>
@@ -885,43 +882,6 @@
            </layout>
           </item>
           <item>
-           <spacer name="verticalSpacer_18">
-            <property name="orientation">
-             <enum>Qt::Vertical</enum>
-            </property>
-            <property name="sizeHint" stdset="0">
-             <size>
-              <width>20</width>
-              <height>40</height>
-             </size>
-            </property>
-           </spacer>
-          </item>
-          <item>
-           <layout class="QHBoxLayout" name="horizontalLayout_18">
-            <item>
-             <widget class="QLabel" name="label_22">
-              <property name="text">
-               <string>Antal minutter mellem hvert check:</string>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QSpinBox" name="spinBox_minutes">
-              <property name="minimum">
-               <number>5</number>
-              </property>
-              <property name="maximum">
-               <number>60</number>
-              </property>
-              <property name="singleStep">
-               <number>5</number>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </item>
-          <item>
            <spacer name="verticalSpacer_19">
             <property name="orientation">
              <enum>Qt::Vertical</enum>
@@ -938,19 +898,6 @@
         </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout_15">
-          <item>
-           <widget class="QPushButton" name="pushButton_notiprev">
-            <property name="maximumSize">
-             <size>
-              <width>150</width>
-              <height>16777215</height>
-             </size>
-            </property>
-            <property name="text">
-             <string>Tilbage</string>
-            </property>
-           </widget>
-          </item>
           <item>
            <widget class="QPushButton" name="pushButton_search">
             <property name="maximumSize">

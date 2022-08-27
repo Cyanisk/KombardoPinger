@@ -20,23 +20,14 @@ from PyQt5.QtCore import QTimer, QTime, QDate, QDateTime
 from MainWindow import Ui_MainWindow
 from TimeWidget import TimeWidget
 
-# TODO: Get moving back and forth through the app work
 # TODO: Perhaps change parameters along with the user?
 # TODO: Try to leave more room for user input while working?
-# TODO: Button to reset departure time range?
-# TODO: Send a mail containing departures initially available
-# TODO: Integers in variables.txt
 # TODO: Use timeout in getElements
 # TODO: Maybe put more variables in the GUI?
-# TODO: Rename functions
+# TODO: Rename functions?
 # TODO: A function handling exceptions
 # TODO: Hide browser
 # TODO: Handle when geckodriver wants to update (program crashes)
-# TODO: Handle more exceptions
-# TODO: I notice that if a date is selected before the departures of currently 
-#       selected date have loaded, then the departures of currently selected
-#       date will show instead of the departures of the selected date
-# TODO: Update list of attributes (or just delete it)
 
 def loading_is_done(locator):
     """ Custom ExpectedCondition for determining whether the element is no
@@ -53,23 +44,6 @@ def loading_is_done(locator):
     return _predicate
 
 class KombardoPinger(QMainWindow):
-    
-    # List of attributes:
-    # self.ui
-    # self.var
-    # self.driver
-    # self.orig
-    # self.dest
-    # self.trailer
-    # self.n_passengers
-    # self.first_date
-    # self.last_date
-    # self.n_dates
-    # self.time_widgets
-    # self.noti_email
-    # self.search_freq
-    # self.start_time
-    # self.end_time
 
     def __init__(self):
         super().__init__()
@@ -107,16 +81,15 @@ class KombardoPinger(QMainWindow):
         self.ui.dateEdit_last.dateChanged.connect(self.fixFirstDate)
 
         # Events (timepage)
-        self.ui.pushButton_timeprev.clicked.connect(self.timePrev)
         self.ui.pushButton_timenext.clicked.connect(self.timeNext)
         self.ui.pushButton_nextdate.clicked.connect(self.nextDate)
         self.ui.pushButton_prevdate.clicked.connect(self.prevDate)
         self.ui.dateEdit_time.dateChanged.connect(self.changeTimeWidget)
         self.ui.timeEdit_globalFirst.timeChanged.connect(self.fixIndividualFirstTimes)
         self.ui.timeEdit_globalLast.timeChanged.connect(self.fixIndividualLastTimes)
+        self.ui.pushButton_resettimerange.clicked.connect(self.resetTimeRange)
 
         # Events (notipage)
-        self.ui.pushButton_notiprev.clicked.connect(self.notiPrev)
         self.ui.pushButton_search.clicked.connect(self.notiSearch)
 
         # Events (searchpage)
@@ -202,9 +175,6 @@ class KombardoPinger(QMainWindow):
         self.ui.dateEdit_time.setDate(self.first_date)
         self.ui.dateEdit_time.setMinimumDate(self.first_date)
         self.ui.dateEdit_time.setMaximumDate(self.last_date)
-    
-    def timePrev(self):
-        self.ui.stackedWidget.setCurrentIndex(0)
 
     def timeNext(self):
         # Store the desired range of departure times
@@ -217,18 +187,14 @@ class KombardoPinger(QMainWindow):
             w.desired = desired
             
         self.ui.stackedWidget.setCurrentIndex(3)
-        
-    def notiPrev(self):
-        self.ui.stackedWidget.setCurrentIndex(2)
 
     def notiSearch(self):
-        
         mail = self.getMailAddress()
         if mail == None:
             return
         
         self.noti_email = mail
-        self.search_freq = self.ui.spinBox_minutes.value() * 60000
+        self.search_freq = 5 * 60000
 
         self.ui.stackedWidget.setCurrentIndex(4)
         self.start_time = QDateTime.currentDateTime()
@@ -497,11 +463,17 @@ class KombardoPinger(QMainWindow):
     def fixIndividualLastTimes(self):
         last_time = self.ui.timeEdit_globalLast.time().toString('hh:mm')
         for w in self.time_widgets:
-            for i in range(w.comboBox_timelast.count()):
-                if w.comboBox_timelast.itemText(i) > last_time:
-                    w.comboBox_timelast.setCurrentIndex(i-1)
+            for i in range(w.comboBox_timelast.count()-1, 0, -1):
+                if w.comboBox_timelast.itemText(i) <= last_time:
+                    w.comboBox_timelast.setCurrentIndex(i)
                     break
-
+    
+    def resetTimeRange(self):
+        self.ui.timeEdit_globalFirst.setTime(QTime(0,0))
+        self.ui.timeEdit_globalLast.setTime(QTime(23,59))
+        self.fixIndividualFirstTimes()
+        self.fixIndividualLastTimes()
+        
     def nextDate(self):
         self.ui.dateEdit_time.setDate(
             self.ui.dateEdit_time.date().addDays(1))
@@ -534,13 +506,23 @@ class KombardoPinger(QMainWindow):
         text = re.sub('..:..', end_time, text)
         self.ui.label_endTime.setText(text)
         
-        # Print currently available departures
-        date = self.first_date
+        # Mail currently available departures
+        if self.ui.checkBox_current.isChecked():
+            subject = 'Ledige billetter'
+            text = 'Ledige afgange:'
+            
+            for w in self.time_widgets:
+                date_string = '\n' + w.date.toString('dd/MM:')
+                dep_string = ''
+                for i in range(len(w.dep_times)):
+                    if w.available[i] & w.desired[i]:
+                        dep_string += '\n' + w.dep_times[i]
+                
+                if dep_string != '':
+                    text += date_string + dep_string + '\n'
+                
+            self.sendNotification(subject, text)
         
-        for i in range(self.n_dates):
-            print(date)
-            print(self.time_widgets[i].available)
-            date = date.addDays(1)
         
         QTimer.singleShot(self.search_freq, self.searchLoop)
 
@@ -557,7 +539,7 @@ class KombardoPinger(QMainWindow):
                     self.ui.pushButton_extend.setEnabled(True)
                 
                 # Result string which will be sent to receiver email
-                result = 'New available:'
+                result = 'Nye ledige afgange:'
                 
                 # Check availability for each date
                 has_any_new_available = False
