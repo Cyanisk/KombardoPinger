@@ -12,6 +12,7 @@ from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import ElementClickInterceptedException, NoSuchElementException
 
@@ -19,15 +20,6 @@ from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from PyQt5.QtCore import QTimer, QTime, QDate, QDateTime
 from MainWindow import Ui_MainWindow
 from TimeWidget import TimeWidget
-
-# TODO: Perhaps change parameters along with the user?
-# TODO: Try to leave more room for user input while working?
-# TODO: Use timeout in getElements
-# TODO: Maybe put more variables in the GUI?
-# TODO: Rename functions?
-# TODO: A function handling exceptions
-# TODO: Hide browser
-# TODO: Handle when geckodriver wants to update (program crashes)
 
 def loading_is_done(locator):
     """ Custom ExpectedCondition for determining whether the element is no
@@ -107,7 +99,9 @@ class KombardoPinger(QMainWindow):
         self.ui.dateEdit_last.setMinimumDate(date.today())
 
         # Open website
-        self.driver = webdriver.Firefox()
+        firefox_options = Options()
+        firefox_options.add_argument('--headless')
+        self.driver = webdriver.Firefox(options=firefox_options)
         self.driver.get('https://www.bornholmslinjen.dk/booking')
         
         # Decline unnecessary cookies
@@ -362,7 +356,6 @@ class KombardoPinger(QMainWindow):
                 if second_attempt:
                     return [], []
                 else:
-                    print('Lemme try again')
                     return self.getAvailableDepartures(date, True)
         
         deps_available = self.getAvailable(date_buttons)
@@ -557,24 +550,17 @@ class KombardoPinger(QMainWindow):
                     if (len(is_available) == 0) & (w.date == self.first_date):
                         self.first_date = self.first_date.addDays(1)
                         self.time_widgets = self.time_widgets[1:]
-                        print('Removed the date ' + w.date.toString('dd/MM:'))
                         
                         if self.first_date > self.last_date:
                             subject = 'Soegning er afsluttet fordi alle relevante afgange er passeret'
-                            text = 'Alle valgte afgange er passeret, så soegningen er stoppet'
+                            text = 'Alle valgte afgange er passeret, saa soegningen er stoppet'
                             self.sendNotification(subject, text)
                             self.endSearch()
                         
                     # Remove passed departures and update availability
                     elif len(w.available) > len(is_available):
-                        print('changed ' + w.date.toString('dd/MM:') + ' from')
-                        print(w.dep_times)
-                        print(w.available)
                         len_diff = len(w.available) - len(is_available)
                         w.dep_times = w.dep_times[len_diff:]
-                        print('to')
-                        print(w.dep_times)
-                        print(is_available)
                     w.available = is_available
                         
                 
@@ -587,7 +573,6 @@ class KombardoPinger(QMainWindow):
                 QTimer.singleShot(self.search_freq, self.searchLoop)
                 
             except Exception:
-                traceback.print_exc()
                 self.exception_streak += 1
                 
                 if self.exception_streak > 5:
