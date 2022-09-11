@@ -1,5 +1,4 @@
 import sys
-import traceback
 import random
 import re
 from datetime import date
@@ -14,7 +13,7 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.firefox.options import Options
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import ElementClickInterceptedException, NoSuchElementException
+from selenium.common.exceptions import NoSuchElementException
 
 from PyQt5.QtWidgets import QApplication, QMainWindow, QStackedWidget
 from PyQt5.QtCore import QTimer, QTime, QDate, QDateTime
@@ -565,7 +564,7 @@ class KombardoPinger(QMainWindow):
                         
                 
                 if has_any_new_available:
-                    subject = 'Nye ledige billeter'
+                    subject = 'Nye ledige billetter'
                     self.sendNotification(subject, result)
                 
                 self.exception_streak = 0

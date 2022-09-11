@@ -1,0 +1,7 @@
+init_search_hours 4
+extend_search_hours 2
+timeout_secs 60
+smtp_server [mail_smtp_for_sender]
+port [mail_port_for_sender]
+sender [mail_address_of_sender]
+password [password_of_sender]
